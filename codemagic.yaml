@@ -82,7 +82,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - your@email.com
+          Farazsocialh@gmail.com
         notify:
           success: true
           failure: true
