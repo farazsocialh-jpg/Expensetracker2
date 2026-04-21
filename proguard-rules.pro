@@ -1,0 +1,5 @@
+-keepattributes *Annotation*
+-keep class com.expensetracker.** { *; }
+-keep class * extends androidx.room.RoomDatabase
+-keep @androidx.room.Entity class *
+-dontwarn org.slf4j.**

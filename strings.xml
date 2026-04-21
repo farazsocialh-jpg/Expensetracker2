@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ExpenseTracker</string>
+    <string name="sms_permission_rationale">ExpenseTracker needs SMS access to automatically detect and import your bank debit transactions. Your data is processed entirely offline and never shared.</string>
+</resources>
