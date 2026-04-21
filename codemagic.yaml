@@ -9,35 +9,45 @@ workflows:
         script: |
           set -e
 
-          # Root gradle files
+          # ── Gradle wrapper ───────────────────────────────────────────────
           mkdir -p gradle/wrapper
           cp gradle-wrapper.properties gradle/wrapper/gradle-wrapper.properties
-          cp libs.versions.toml gradle/libs.versions.toml
+          cp libs.versions.toml        gradle/libs.versions.toml
 
-          # App source directories
-          SRC=app/src/main/java/com/expensetracker
-          mkdir -p $SRC/data/db
-          mkdir -p $SRC/data/repository
-          mkdir -p $SRC/domain/model
-          mkdir -p $SRC/presentation/dashboard
-          mkdir -p $SRC/presentation/transactions
-          mkdir -p $SRC/presentation/budget
-          mkdir -p $SRC/presentation/ui/theme
-          mkdir -p $SRC/service
-          mkdir -p $SRC/utils
+          # ── App module folders ───────────────────────────────────────────
+          mkdir -p app/src/main/java/com/expensetracker/data/db
+          mkdir -p app/src/main/java/com/expensetracker/data/repository
+          mkdir -p app/src/main/java/com/expensetracker/domain/model
+          mkdir -p app/src/main/java/com/expensetracker/presentation/dashboard
+          mkdir -p app/src/main/java/com/expensetracker/presentation/transactions
+          mkdir -p app/src/main/java/com/expensetracker/presentation/budget
+          mkdir -p app/src/main/java/com/expensetracker/presentation/ui/theme
+          mkdir -p app/src/main/java/com/expensetracker/service
+          mkdir -p app/src/main/java/com/expensetracker/utils
           mkdir -p app/src/main/res/values
           mkdir -p app/src/main/res/xml
 
-          # Kotlin source files
+          SRC=app/src/main/java/com/expensetracker
+
+          # app/build.gradle.kts (was saved as app.build.gradle.kts to avoid name clash)
+          cp app.build.gradle.kts app/build.gradle.kts
+
+          # Root package
           cp MainActivity.kt        $SRC/MainActivity.kt
           cp AppModule.kt           $SRC/AppModule.kt
           cp ExpenseTrackerApp.kt   $SRC/ExpenseTrackerApp.kt
+
+          # Data layer
           cp Daos.kt                $SRC/data/db/Daos.kt
           cp Entities.kt            $SRC/data/db/Entities.kt
           cp ExpenseDatabase.kt     $SRC/data/db/ExpenseDatabase.kt
           cp Mappers.kt             $SRC/data/db/Mappers.kt
           cp TransactionRepository.kt $SRC/data/repository/TransactionRepository.kt
+
+          # Domain layer
           cp Models.kt              $SRC/domain/model/Models.kt
+
+          # Presentation layer
           cp DashboardScreen.kt     $SRC/presentation/dashboard/DashboardScreen.kt
           cp DashboardViewModel.kt  $SRC/presentation/dashboard/DashboardViewModel.kt
           cp TransactionsScreen.kt  $SRC/presentation/transactions/TransactionsScreen.kt
@@ -46,23 +56,33 @@ workflows:
           cp BudgetViewModel.kt     $SRC/presentation/budget/BudgetViewModel.kt
           cp SmsPermissionScreen.kt $SRC/presentation/SmsPermissionScreen.kt
           cp Theme.kt               $SRC/presentation/ui/theme/Theme.kt
+
+          # Service & utils
           cp SmsParser.kt           $SRC/service/SmsParser.kt
           cp SmsReceiver.kt         $SRC/service/SmsReceiver.kt
           cp CsvExporter.kt         $SRC/utils/CsvExporter.kt
 
-          # Resource files
+          # Resources & manifest
           cp AndroidManifest.xml    app/src/main/AndroidManifest.xml
           cp strings.xml            app/src/main/res/values/strings.xml
           cp themes.xml             app/src/main/res/values/themes.xml
           cp file_paths.xml         app/src/main/res/xml/file_paths.xml
 
-          echo "Folder structure rebuilt successfully"
+          # Verify key files exist
+          echo "--- Verifying structure ---"
+          ls build.gradle.kts
+          ls app/build.gradle.kts
+          ls settings.gradle.kts
+          ls gradle/libs.versions.toml
+          ls gradle/wrapper/gradle-wrapper.properties
+          ls app/src/main/AndroidManifest.xml
+          echo "✅ Structure OK"
 
       - name: Download Gradle wrapper jar
         script: |
-          mkdir -p gradle/wrapper
-          curl -L "https://github.com/gradle/gradle/raw/v8.7.0/gradle/wrapper/gradle-wrapper.jar" \
+          curl -sL "https://github.com/gradle/gradle/raw/v8.7.0/gradle/wrapper/gradle-wrapper.jar" \
             -o gradle/wrapper/gradle-wrapper.jar
+          echo "Wrapper jar: $(ls -lh gradle/wrapper/gradle-wrapper.jar)"
 
       - name: Set up local.properties
         script: |
@@ -82,7 +102,7 @@ workflows:
     publishing:
       email:
         recipients:
-         - Farazsocialh@gmail.com
+          - your@email.com
         notify:
           success: true
           failure: true
