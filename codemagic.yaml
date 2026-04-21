@@ -5,17 +5,80 @@ workflows:
     environment:
       java: 17
     scripts:
+      - name: Reconstruct project folder structure
+        script: |
+          set -e
+
+          # Root gradle files
+          mkdir -p gradle/wrapper
+          cp gradle-wrapper.properties gradle/wrapper/gradle-wrapper.properties
+          cp libs.versions.toml gradle/libs.versions.toml
+
+          # App source directories
+          SRC=app/src/main/java/com/expensetracker
+          mkdir -p $SRC/data/db
+          mkdir -p $SRC/data/repository
+          mkdir -p $SRC/domain/model
+          mkdir -p $SRC/presentation/dashboard
+          mkdir -p $SRC/presentation/transactions
+          mkdir -p $SRC/presentation/budget
+          mkdir -p $SRC/presentation/ui/theme
+          mkdir -p $SRC/service
+          mkdir -p $SRC/utils
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/xml
+
+          # Kotlin source files
+          cp MainActivity.kt        $SRC/MainActivity.kt
+          cp AppModule.kt           $SRC/AppModule.kt
+          cp ExpenseTrackerApp.kt   $SRC/ExpenseTrackerApp.kt
+          cp Daos.kt                $SRC/data/db/Daos.kt
+          cp Entities.kt            $SRC/data/db/Entities.kt
+          cp ExpenseDatabase.kt     $SRC/data/db/ExpenseDatabase.kt
+          cp Mappers.kt             $SRC/data/db/Mappers.kt
+          cp TransactionRepository.kt $SRC/data/repository/TransactionRepository.kt
+          cp Models.kt              $SRC/domain/model/Models.kt
+          cp DashboardScreen.kt     $SRC/presentation/dashboard/DashboardScreen.kt
+          cp DashboardViewModel.kt  $SRC/presentation/dashboard/DashboardViewModel.kt
+          cp TransactionsScreen.kt  $SRC/presentation/transactions/TransactionsScreen.kt
+          cp TransactionViewModel.kt $SRC/presentation/transactions/TransactionViewModel.kt
+          cp BudgetScreen.kt        $SRC/presentation/budget/BudgetScreen.kt
+          cp BudgetViewModel.kt     $SRC/presentation/budget/BudgetViewModel.kt
+          cp SmsPermissionScreen.kt $SRC/presentation/SmsPermissionScreen.kt
+          cp Theme.kt               $SRC/presentation/ui/theme/Theme.kt
+          cp SmsParser.kt           $SRC/service/SmsParser.kt
+          cp SmsReceiver.kt         $SRC/service/SmsReceiver.kt
+          cp CsvExporter.kt         $SRC/utils/CsvExporter.kt
+
+          # Resource files
+          cp AndroidManifest.xml    app/src/main/AndroidManifest.xml
+          cp strings.xml            app/src/main/res/values/strings.xml
+          cp themes.xml             app/src/main/res/values/themes.xml
+          cp file_paths.xml         app/src/main/res/xml/file_paths.xml
+
+          echo "Folder structure rebuilt successfully"
+
+      - name: Download Gradle wrapper jar
+        script: |
+          mkdir -p gradle/wrapper
+          curl -L "https://github.com/gradle/gradle/raw/v8.7.0/gradle/wrapper/gradle-wrapper.jar" \
+            -o gradle/wrapper/gradle-wrapper.jar
+
       - name: Set up local.properties
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+
       - name: Make gradlew executable
         script: |
           chmod +x gradlew
+
       - name: Build debug APK
         script: |
           ./gradlew assembleDebug --stacktrace
+
     artifacts:
       - app/build/outputs/apk/debug/app-debug.apk
+
     publishing:
       email:
         recipients:
