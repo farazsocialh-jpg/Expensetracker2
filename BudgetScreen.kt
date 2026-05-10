@@ -32,8 +32,16 @@ fun BudgetScreen(viewModel: BudgetViewModel = hiltViewModel()) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Budget Manager", fontWeight = FontWeight.Bold) },
-                subtitle = { Text("${now.month.name.lowercase().replaceFirstChar { it.uppercase() }} ${now.year}") }
+                title = {
+                    Column {
+                        Text("Budget Manager", fontWeight = FontWeight.Bold)
+                        Text(
+                            "${now.month.name.lowercase().replaceFirstChar { it.uppercase() }} ${now.year}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             )
         },
         floatingActionButton = {
@@ -50,16 +58,14 @@ fun BudgetScreen(viewModel: BudgetViewModel = hiltViewModel()) {
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item {
-                BudgetSummaryHeader(state)
-            }
+            item { BudgetSummaryHeader(state) }
             items(ExpenseCategory.values().toList()) { cat ->
                 val budget = state.budgets.find { it.category == cat }
-                val summary = state.summaries.find { it.category == cat }
+                val spent = state.summaries.find { it.category == cat }?.totalAmount ?: 0.0
                 BudgetCategoryCard(
                     category = cat,
                     budget = budget,
-                    spent = summary?.totalAmount ?: 0.0,
+                    spent = spent,
                     onEdit = { viewModel.showAddDialog(cat) },
                     onDelete = { budget?.let { viewModel.deleteBudget(it) } }
                 )
@@ -88,20 +94,18 @@ fun BudgetSummaryHeader(state: BudgetUiState) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
     ) {
         Column(Modifier.padding(20.dp)) {
-            Text("Total Budget", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+            Text("Total Budget",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    "₹${"%,.0f".format(totalSpent)}",
+                Text("₹${"%,.0f".format(totalSpent)}",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Text(
-                    " / ₹${"%,.0f".format(totalBudget)}",
+                    color = MaterialTheme.colorScheme.onPrimaryContainer)
+                Text(" / ₹${"%,.0f".format(totalBudget)}",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
-                )
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f))
             }
             Spacer(Modifier.height(12.dp))
             LinearProgressIndicator(
@@ -111,11 +115,9 @@ fun BudgetSummaryHeader(state: BudgetUiState) {
                 trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f)
             )
             Spacer(Modifier.height(4.dp))
-            Text(
-                "${(progress * 100).toInt()}% of monthly budget used",
+            Text("${(progress * 100).toInt()}% of monthly budget used",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-            )
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
         }
     }
 }
@@ -129,9 +131,9 @@ fun BudgetCategoryCard(
     onDelete: () -> Unit
 ) {
     val hasBudget = budget != null
-    val progress = if (hasBudget && budget!!.monthlyLimit > 0)
-        min((spent / budget.monthlyLimit).toFloat(), 1f) else 0f
-    val isOver = hasBudget && spent > (budget?.monthlyLimit ?: 0.0)
+    val limit = budget?.monthlyLimit ?: 0.0
+    val progress = if (hasBudget && limit > 0) min((spent / limit).toFloat(), 1f) else 0f
+    val isOver = hasBudget && spent > limit
     val color = CategoryColors[category.name] ?: MaterialTheme.colorScheme.primary
 
     Card(
@@ -143,14 +145,13 @@ fun BudgetCategoryCard(
                 MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(category.emoji, fontSize = 24.sp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(category.displayName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                Text(category.displayName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold)
                 if (hasBudget) {
                     Spacer(Modifier.height(6.dp))
                     LinearProgressIndicator(
@@ -160,30 +161,29 @@ fun BudgetCategoryCard(
                         trackColor = color.copy(alpha = 0.2f)
                     )
                     Spacer(Modifier.height(4.dp))
-                    Text(
-                        "₹${"%,.0f".format(spent)} / ₹${"%,.0f".format(budget!!.monthlyLimit)}",
+                    Text("₹${"%,.0f".format(spent)} / ₹${"%,.0f".format(limit)}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (isOver) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                        color = if (isOver) MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     Text(
                         if (spent > 0) "₹${"%,.0f".format(spent)} spent · no budget set"
                         else "No budget set",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             IconButton(onClick = onEdit) {
                 Icon(
                     if (hasBudget) Icons.Default.Edit else Icons.Default.Add,
-                    contentDescription = "Edit budget",
+                    contentDescription = "Edit",
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
             if (hasBudget) {
                 IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete budget", tint = MaterialTheme.colorScheme.error)
+                    Icon(Icons.Default.Delete, contentDescription = "Delete",
+                        tint = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -197,7 +197,7 @@ fun BudgetDialog(budget: Budget, onDismiss: () -> Unit, onSave: (Budget) -> Unit
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Set Budget — ${budget.category.emoji} ${budget.category.displayName}") },
+        title = { Text("${budget.category.emoji} ${budget.category.displayName} Budget") },
         text = {
             OutlinedTextField(
                 value = amount,

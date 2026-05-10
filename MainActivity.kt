@@ -10,7 +10,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
@@ -23,10 +23,10 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import dagger.hilt.android.AndroidEntryPoint
 
-sealed class Screen(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    object Dashboard : Screen("dashboard", "Dashboard", Icons.Default.Home)
+sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
+    object Dashboard    : Screen("dashboard",    "Dashboard",    Icons.Default.Home)
     object Transactions : Screen("transactions", "Transactions", Icons.Default.List)
-    object Budget : Screen("budget", "Budget", Icons.Default.AccountBalance)
+    object Budget       : Screen("budget",       "Budget",       Icons.Default.AccountBalance)
 }
 
 @AndroidEntryPoint
@@ -36,19 +36,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             var isDarkTheme by remember { mutableStateOf(true) }
-
             ExpenseTrackerTheme(darkTheme = isDarkTheme) {
                 val smsPermissions = rememberMultiplePermissionsState(
                     listOf(Manifest.permission.READ_SMS, Manifest.permission.RECEIVE_SMS)
                 )
-
-                if (!smsPermissions.allPermissionsGranted && !smsPermissions.shouldShowRationale) {
-                    SmsPermissionScreen(onGrantPermission = { smsPermissions.launchMultiplePermissionRequest() })
-                } else {
-                    MainApp(
-                        isDarkTheme = isDarkTheme,
-                        onToggleTheme = { isDarkTheme = !isDarkTheme }
+                if (!smsPermissions.allPermissionsGranted) {
+                    SmsPermissionScreen(
+                        onGrantPermission = { smsPermissions.launchMultiplePermissionRequest() }
                     )
+                } else {
+                    MainApp(isDarkTheme = isDarkTheme, onToggleTheme = { isDarkTheme = !isDarkTheme })
                 }
             }
         }
@@ -64,7 +61,7 @@ fun MainApp(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {},
+                title = { Text("ExpenseTracker") },
                 actions = {
                     IconButton(onClick = onToggleTheme) {
                         Icon(

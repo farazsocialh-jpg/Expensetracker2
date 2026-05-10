@@ -1,6 +1,5 @@
 package com.expensetracker.presentation.transactions
 
-import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -11,9 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -23,7 +20,6 @@ import com.expensetracker.domain.model.ExpenseCategory
 import com.expensetracker.domain.model.Transaction
 import com.expensetracker.presentation.dashboard.EmptyState
 import com.expensetracker.presentation.dashboard.TransactionItem
-import com.expensetracker.presentation.ui.theme.CategoryColors
 import java.time.LocalDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,18 +48,11 @@ fun TransactionsScreen(viewModel: TransactionViewModel = hiltViewModel()) {
             }
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            // Search bar
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             OutlinedTextField(
                 value = state.filter.searchQuery,
                 onValueChange = { viewModel.setFilter(state.filter.copy(searchQuery = it)) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 placeholder = { Text("Search transactions…") },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 trailingIcon = {
@@ -77,7 +66,6 @@ fun TransactionsScreen(viewModel: TransactionViewModel = hiltViewModel()) {
                 singleLine = true
             )
 
-            // Category filters
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -165,7 +153,6 @@ fun AddEditTransactionDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
-                // Category picker
                 ExposedDropdownMenuBox(
                     expanded = showCategoryDropdown,
                     onExpandedChange = { showCategoryDropdown = it }
@@ -185,10 +172,7 @@ fun AddEditTransactionDialog(
                         ExpenseCategory.values().forEach { cat ->
                             DropdownMenuItem(
                                 text = { Text("${cat.emoji} ${cat.displayName}") },
-                                onClick = {
-                                    selectedCategory = cat
-                                    showCategoryDropdown = false
-                                }
+                                onClick = { selectedCategory = cat; showCategoryDropdown = false }
                             )
                         }
                     }
@@ -203,25 +187,21 @@ fun AddEditTransactionDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    val amt = amount.toDoubleOrNull() ?: return@Button
-                    onSave(
-                        Transaction(
-                            id = transaction?.id ?: 0L,
-                            amount = amt,
-                            merchant = merchant.ifBlank { "Unknown" },
-                            category = selectedCategory,
-                            dateTime = transaction?.dateTime ?: LocalDateTime.now(),
-                            isManual = true,
-                            note = note
-                        )
+            Button(onClick = {
+                val amt = amount.toDoubleOrNull() ?: return@Button
+                onSave(
+                    Transaction(
+                        id = transaction?.id ?: 0L,
+                        amount = amt,
+                        merchant = merchant.ifBlank { "Unknown" },
+                        category = selectedCategory,
+                        dateTime = transaction?.dateTime ?: LocalDateTime.now(),
+                        isManual = true,
+                        note = note
                     )
-                }
-            ) { Text("Save") }
+                )
+            }) { Text("Save") }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
