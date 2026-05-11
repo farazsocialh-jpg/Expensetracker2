@@ -99,11 +99,11 @@ fun BudgetSummaryHeader(state: BudgetUiState) {
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.Bottom) {
-                Text("₹${"%,.0f".format(totalSpent)}",
+                Text("QAR ${"%,.0f".format(totalSpent)}",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer)
-                Text(" / ₹${"%,.0f".format(totalBudget)}",
+                Text(" / QAR ${"%,.0f".format(totalBudget)}",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f))
             }
@@ -161,13 +161,13 @@ fun BudgetCategoryCard(
                         trackColor = color.copy(alpha = 0.2f)
                     )
                     Spacer(Modifier.height(4.dp))
-                    Text("₹${"%,.0f".format(spent)} / ₹${"%,.0f".format(limit)}",
+                    Text("QAR ${"%,.0f".format(spent)} / QAR ${"%,.0f".format(limit)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isOver) MaterialTheme.colorScheme.error
                                 else MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     Text(
-                        if (spent > 0) "₹${"%,.0f".format(spent)} spent · no budget set"
+                        if (spent > 0) "QAR ${"%,.0f".format(spent)} spent · no budget set"
                         else "No budget set",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -202,7 +202,7 @@ fun BudgetDialog(budget: Budget, onDismiss: () -> Unit, onSave: (Budget) -> Unit
             OutlinedTextField(
                 value = amount,
                 onValueChange = { amount = it },
-                label = { Text("Monthly limit (₹)") },
+                label = { Text("Monthly limit (QAR )") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true

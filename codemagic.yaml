@@ -9,18 +9,17 @@ workflows:
         script: |
           set -e
 
-          # ── Gradle wrapper ───────────────────────────────────────────────
           mkdir -p gradle/wrapper
           cp gradle-wrapper.properties gradle/wrapper/gradle-wrapper.properties
           cp libs.versions.toml        gradle/libs.versions.toml
 
-          # ── App module folders ───────────────────────────────────────────
           mkdir -p app/src/main/java/com/expensetracker/data/db
           mkdir -p app/src/main/java/com/expensetracker/data/repository
           mkdir -p app/src/main/java/com/expensetracker/domain/model
           mkdir -p app/src/main/java/com/expensetracker/presentation/dashboard
           mkdir -p app/src/main/java/com/expensetracker/presentation/transactions
           mkdir -p app/src/main/java/com/expensetracker/presentation/budget
+          mkdir -p app/src/main/java/com/expensetracker/presentation/settings
           mkdir -p app/src/main/java/com/expensetracker/presentation/ui/theme
           mkdir -p app/src/main/java/com/expensetracker/service
           mkdir -p app/src/main/java/com/expensetracker/utils
@@ -34,64 +33,49 @@ workflows:
 
           SRC=app/src/main/java/com/expensetracker
 
-          # app build.gradle
-          cp app.build.gradle.kts app/build.gradle.kts
-
-          # Root package
-          cp MainActivity.kt        $SRC/MainActivity.kt
-          cp AppModule.kt           $SRC/AppModule.kt
-          cp ExpenseTrackerApp.kt   $SRC/ExpenseTrackerApp.kt
-
-          # Data layer
-          cp Daos.kt                $SRC/data/db/Daos.kt
-          cp Entities.kt            $SRC/data/db/Entities.kt
-          cp ExpenseDatabase.kt     $SRC/data/db/ExpenseDatabase.kt
-          cp Mappers.kt             $SRC/data/db/Mappers.kt
+          cp app.build.gradle.kts     app/build.gradle.kts
+          cp MainActivity.kt          $SRC/MainActivity.kt
+          cp AppModule.kt             $SRC/AppModule.kt
+          cp ExpenseTrackerApp.kt     $SRC/ExpenseTrackerApp.kt
+          cp Daos.kt                  $SRC/data/db/Daos.kt
+          cp Entities.kt              $SRC/data/db/Entities.kt
+          cp ExpenseDatabase.kt       $SRC/data/db/ExpenseDatabase.kt
+          cp Mappers.kt               $SRC/data/db/Mappers.kt
           cp TransactionRepository.kt $SRC/data/repository/TransactionRepository.kt
+          cp SettingsRepository.kt    $SRC/data/repository/SettingsRepository.kt
+          cp Models.kt                $SRC/domain/model/Models.kt
+          cp DashboardScreen.kt       $SRC/presentation/dashboard/DashboardScreen.kt
+          cp DashboardViewModel.kt    $SRC/presentation/dashboard/DashboardViewModel.kt
+          cp TransactionsScreen.kt    $SRC/presentation/transactions/TransactionsScreen.kt
+          cp TransactionViewModel.kt  $SRC/presentation/transactions/TransactionViewModel.kt
+          cp BudgetScreen.kt          $SRC/presentation/budget/BudgetScreen.kt
+          cp BudgetViewModel.kt       $SRC/presentation/budget/BudgetViewModel.kt
+          cp SettingsScreen.kt        $SRC/presentation/settings/SettingsScreen.kt
+          cp SettingsViewModel.kt     $SRC/presentation/settings/SettingsViewModel.kt
+          cp SmsPermissionScreen.kt   $SRC/presentation/SmsPermissionScreen.kt
+          cp Theme.kt                 $SRC/presentation/ui/theme/Theme.kt
+          cp SmsParser.kt             $SRC/service/SmsParser.kt
+          cp SmsReceiver.kt           $SRC/service/SmsReceiver.kt
+          cp SmsInboxScanner.kt       $SRC/service/SmsInboxScanner.kt
+          cp CsvExporter.kt           $SRC/utils/CsvExporter.kt
 
-          # Domain layer
-          cp Models.kt              $SRC/domain/model/Models.kt
+          cp AndroidManifest.xml      app/src/main/AndroidManifest.xml
+          cp strings.xml              app/src/main/res/values/strings.xml
+          cp themes.xml               app/src/main/res/values/themes.xml
+          cp file_paths.xml           app/src/main/res/xml/file_paths.xml
+          cp network_security_config.xml app/src/main/res/xml/network_security_config.xml
 
-          # Presentation layer
-          cp DashboardScreen.kt     $SRC/presentation/dashboard/DashboardScreen.kt
-          cp DashboardViewModel.kt  $SRC/presentation/dashboard/DashboardViewModel.kt
-          cp TransactionsScreen.kt  $SRC/presentation/transactions/TransactionsScreen.kt
-          cp TransactionViewModel.kt $SRC/presentation/transactions/TransactionViewModel.kt
-          cp BudgetScreen.kt        $SRC/presentation/budget/BudgetScreen.kt
-          cp BudgetViewModel.kt     $SRC/presentation/budget/BudgetViewModel.kt
-          cp SmsPermissionScreen.kt $SRC/presentation/SmsPermissionScreen.kt
-          cp Theme.kt               $SRC/presentation/ui/theme/Theme.kt
+          for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            cp mipmap-${density}/ic_launcher.png       app/src/main/res/mipmap-${density}/ic_launcher.png
+            cp mipmap-${density}/ic_launcher_round.png app/src/main/res/mipmap-${density}/ic_launcher_round.png
+          done
 
-          # Service & utils
-          cp SmsParser.kt           $SRC/service/SmsParser.kt
-          cp SmsReceiver.kt         $SRC/service/SmsReceiver.kt
-          cp CsvExporter.kt         $SRC/utils/CsvExporter.kt
-
-          # Resources & manifest
-          cp AndroidManifest.xml    app/src/main/AndroidManifest.xml
-          cp strings.xml            app/src/main/res/values/strings.xml
-          cp themes.xml             app/src/main/res/values/themes.xml
-          cp file_paths.xml         app/src/main/res/xml/file_paths.xml
-
-          # App icons (all densities)
-          cp mipmap-mdpi/ic_launcher.png       app/src/main/res/mipmap-mdpi/ic_launcher.png
-          cp mipmap-mdpi/ic_launcher_round.png app/src/main/res/mipmap-mdpi/ic_launcher_round.png
-          cp mipmap-hdpi/ic_launcher.png       app/src/main/res/mipmap-hdpi/ic_launcher.png
-          cp mipmap-hdpi/ic_launcher_round.png app/src/main/res/mipmap-hdpi/ic_launcher_round.png
-          cp mipmap-xhdpi/ic_launcher.png      app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          cp mipmap-xhdpi/ic_launcher_round.png app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
-          cp mipmap-xxhdpi/ic_launcher.png     app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          cp mipmap-xxhdpi/ic_launcher_round.png app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
-          cp mipmap-xxxhdpi/ic_launcher.png    app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          cp mipmap-xxxhdpi/ic_launcher_round.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-
-          echo "✅ Structure rebuilt successfully"
+          echo "✅ Structure rebuilt"
 
       - name: Download Gradle wrapper jar
         script: |
           curl -sL "https://github.com/gradle/gradle/raw/v8.7.0/gradle/wrapper/gradle-wrapper.jar" \
             -o gradle/wrapper/gradle-wrapper.jar
-          echo "Wrapper jar: $(ls -lh gradle/wrapper/gradle-wrapper.jar)"
 
       - name: Set up local.properties
         script: |
@@ -103,7 +87,7 @@ workflows:
 
       - name: Build debug APK
         script: |
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --stacktrace 2>&1
 
     artifacts:
       - app/build/outputs/apk/debug/app-debug.apk

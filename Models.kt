@@ -25,7 +25,8 @@ data class Transaction(
     val balance: Double? = null,
     val rawSms: String? = null,
     val isManual: Boolean = false,
-    val note: String = ""
+    val note: String = "",
+    val sender: String = ""
 )
 
 data class Budget(
@@ -49,4 +50,13 @@ data class DashboardStats(
     val monthlyTotal: Double,
     val categorySummaries: List<CategorySummary>,
     val recentTransactions: List<Transaction>
+)
+
+// User settings stored in DataStore
+data class AppSettings(
+    val currencySymbol: String = "QAR",
+    val trustedSenders: List<String> = listOf("QNB", "DOHA BANK", "CBQ", "MASRAF", "HSBC", "QIIB", "DUKHAN", "AHLIBANK"),
+    val debitKeywords: List<String> = listOf("debited", "payment", "purchase", "withdrawn", "charged"),
+    val creditKeywords: List<String> = listOf("credited", "received", "refund"),
+    val autoScanEnabled: Boolean = true
 )

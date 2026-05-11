@@ -134,7 +134,7 @@ fun SpendingCard(label: String, amount: Double, modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(4.dp))
-            Text("₹${"%,.0f".format(amount)}",
+            Text("${currency}${"%,.0f".format(amount)}",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary)
@@ -179,7 +179,7 @@ fun SpendingDonutChart(summaries: List<CategorySummary>, total: Double) {
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.weight(1f))
-                            Text("₹${"%,.0f".format(summary.totalAmount)}",
+                            Text("${currency}${"%,.0f".format(summary.totalAmount)}",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.SemiBold)
                         }
@@ -216,7 +216,7 @@ fun DonutChart(
             }
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("₹${"%,.0f".format(total * animProgress)}",
+            Text("${currency}${"%,.0f".format(total * animProgress)}",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold)
             Text("total",
@@ -277,12 +277,12 @@ fun CategoryRow(summary: CategorySummary) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("₹${"%,.0f".format(summary.totalAmount)}",
+                    Text("${currency}${"%,.0f".format(summary.totalAmount)}",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = if (isOverBudget) MaterialTheme.colorScheme.error else color)
                     if (summary.budgetLimit != null) {
-                        Text("of ₹${"%,.0f".format(summary.budgetLimit)}",
+                        Text("of QAR ${"%,.0f".format(summary.budgetLimit)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -298,7 +298,7 @@ fun CategoryRow(summary: CategorySummary) {
                 )
                 if (isOverBudget && summary.budgetLimit != null) {
                     Text(
-                        "⚠️ Exceeded by ₹${"%,.0f".format(summary.totalAmount - summary.budgetLimit)}",
+                        "⚠️ Exceeded by QAR ${"%,.0f".format(summary.totalAmount - summary.budgetLimit)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(top = 4.dp)
@@ -363,7 +363,7 @@ fun TransactionItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text("-₹${"%,.2f".format(transaction.amount)}",
+                Text("-${currency}${"%,.2f".format(transaction.amount)}",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.error)

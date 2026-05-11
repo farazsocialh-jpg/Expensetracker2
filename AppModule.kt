@@ -23,9 +23,6 @@ object AppModule {
             .fallbackToDestructiveMigration()
             .build()
 
-    @Provides
-    fun provideTransactionDao(db: ExpenseDatabase): TransactionDao = db.transactionDao()
-
-    @Provides
-    fun provideBudgetDao(db: ExpenseDatabase): BudgetDao = db.budgetDao()
+    @Provides fun provideTransactionDao(db: ExpenseDatabase): TransactionDao = db.transactionDao()
+    @Provides fun provideBudgetDao(db: ExpenseDatabase): BudgetDao = db.budgetDao()
 }

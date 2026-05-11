@@ -17,6 +17,7 @@ import androidx.navigation.compose.*
 import com.expensetracker.presentation.SmsPermissionScreen
 import com.expensetracker.presentation.budget.BudgetScreen
 import com.expensetracker.presentation.dashboard.DashboardScreen
+import com.expensetracker.presentation.settings.SettingsScreen
 import com.expensetracker.presentation.transactions.TransactionsScreen
 import com.expensetracker.presentation.ui.theme.ExpenseTrackerTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -24,9 +25,10 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import dagger.hilt.android.AndroidEntryPoint
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
-    object Dashboard    : Screen("dashboard",    "Dashboard",    Icons.Default.Home)
+    object Dashboard    : Screen("dashboard",    "Home",         Icons.Default.Home)
     object Transactions : Screen("transactions", "Transactions", Icons.Default.List)
     object Budget       : Screen("budget",       "Budget",       Icons.Default.AccountBalance)
+    object Settings     : Screen("settings",     "Settings",     Icons.Default.Settings)
 }
 
 @AndroidEntryPoint
@@ -56,7 +58,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainApp(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
     val navController = rememberNavController()
-    val screens = listOf(Screen.Dashboard, Screen.Transactions, Screen.Budget)
+    val screens = listOf(Screen.Dashboard, Screen.Transactions, Screen.Budget, Screen.Settings)
 
     Scaffold(
         topBar = {
@@ -106,6 +108,7 @@ fun MainApp(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
             }
             composable(Screen.Transactions.route) { TransactionsScreen() }
             composable(Screen.Budget.route) { BudgetScreen() }
+            composable(Screen.Settings.route) { SettingsScreen() }
         }
     }
 }
