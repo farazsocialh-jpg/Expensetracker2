@@ -28,10 +28,8 @@ import com.expensetracker.domain.model.ExpenseCategory
 import com.expensetracker.domain.model.Transaction
 import com.expensetracker.presentation.dashboard.formatAmount
 import com.expensetracker.presentation.ui.theme.CategoryColors
-import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -95,7 +93,7 @@ fun TransactionsScreen(viewModel: TransactionViewModel = hiltViewModel()) {
                     title = { Text("Transactions", fontWeight = FontWeight.Bold) },
                     actions = {
                         IconButton(onClick = { viewModel.toggleSelectionMode() }) {
-                            Icon(Icons.Default.Checklist, "Select")
+                            Icon(Icons.Default.CheckBox, "Select")
                         }
                         IconButton(onClick = { viewModel.exportSelected(context) }) {
                             Icon(Icons.Default.Share, "Export CSV")
@@ -151,7 +149,7 @@ fun TransactionsScreen(viewModel: TransactionViewModel = hiltViewModel()) {
                         onClick = { viewModel.setDatePreset(preset) },
                         label = { Text(chipLabel) },
                         trailingIcon = if (preset == DateRangePreset.CUSTOM) {
-                            { Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(16.dp)) }
+                            { Icon(Icons.Default.DateRange, null, modifier = Modifier.size(16.dp)) }
                         } else null
                     )
                 }

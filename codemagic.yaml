@@ -87,6 +87,7 @@ workflows:
 
       - name: Build debug APK
         script: |
+          ./gradlew assembleDebug --info 2>&1 | grep -E "error:|warning:|w:|e:" | head -60
           ./gradlew assembleDebug --stacktrace 2>&1
 
     artifacts:

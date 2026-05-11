@@ -27,8 +27,8 @@ data class Transaction(
     val isManual: Boolean = false,
     val note: String = "",
     val sender: String = "",
-    val cardNumber: String = "",   // last 4 digits extracted from SMS e.g. "4321"
-    val accountLabel: String = ""  // user-assigned label e.g. "QNB Visa"
+    val cardNumber: String = "",
+    val accountLabel: String = ""
 )
 
 data class Budget(
@@ -59,5 +59,6 @@ data class AppSettings(
     val trustedSenders: List<String> = listOf("QNB", "DOHA BANK", "CBQ", "MASRAF", "HSBC", "QIIB", "DUKHAN", "AHLIBANK"),
     val debitKeywords: List<String> = listOf("debited", "payment", "purchase", "withdrawn", "charged"),
     val creditKeywords: List<String> = listOf("credited", "received", "refund"),
-    val autoScanEnabled: Boolean = true
+    val autoScanEnabled: Boolean = true,
+    val monthStartDay: Int = 1   // 1-28, day of month your billing cycle starts
 )
