@@ -1,6 +1,5 @@
 package com.expensetracker.presentation.settings
 
-import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,20 +12,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
     val settings = state.settings
     val progress = state.scanProgress
 
-    // Scan result dialog
     if (progress.done) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissScanResult() },
@@ -35,13 +34,13 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 if (progress.error != null) {
                     Text("Error: ${progress.error}")
                 } else {
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Scanned ${progress.scanned} bank messages")
                         Text("Imported ${progress.imported} new transactions",
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary)
                         if (progress.imported == 0) {
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(4.dp))
                             Text("No new transactions found. Try adjusting your sender list or keywords.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -66,30 +65,26 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
             // ── Scan Inbox ────────────────────────────────────────────────
             item {
-                SectionCard(title = "📥 Scan Existing SMS") {
+                SectionCard("📥 Scan Existing SMS") {
                     Text(
                         "Scan your SMS inbox to import past bank transactions. " +
-                        "Only messages from your trusted senders will be read. " +
+                        "Only messages from your trusted senders are read. " +
                         "All data stays on your device.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(12.dp))
-
                     if (progress.isScanning) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             LinearProgressIndicator(
                                 progress = {
-                                    if (progress.total > 0) progress.scanned.toFloat() / progress.total
-                                    else 0f
+                                    if (progress.total > 0) progress.scanned.toFloat() / progress.total else 0f
                                 },
                                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp))
                             )
                             Spacer(Modifier.height(8.dp))
-                            Text(
-                                "Scanning ${progress.scanned} / ${progress.total} messages…",
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                            Text("Scanning ${progress.scanned} / ${progress.total} messages…",
+                                style = MaterialTheme.typography.bodySmall)
                         }
                     } else {
                         Button(
@@ -107,7 +102,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
             // ── Auto Scan Toggle ─────────────────────────────────────────
             item {
-                SectionCard(title = "🔄 Auto-Import New SMS") {
+                SectionCard("🔄 Auto-Import New SMS") {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text("Auto-import incoming SMS",
@@ -126,16 +121,17 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
             // ── Currency ─────────────────────────────────────────────────
             item {
-                SectionCard(title = "💱 Currency") {
-                    var currency by remember { mutableStateOf(settings.currencySymbol) }
-                    LaunchedEffect(settings.currencySymbol) { currency = settings.currencySymbol }
-
-                    val currencies = listOf("QAR", "AED", "SAR", "KWD", "BHD", "OMR", "USD", "EUR", "GBP", "INR")
+                SectionCard("💱 Currency") {
                     Text("Select your currency:",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(8.dp))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val currencies = listOf("QAR","AED","SAR","KWD","BHD","OMR","USD","EUR","GBP","INR")
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
                         currencies.forEach { c ->
                             FilterChip(
                                 selected = settings.currencySymbol == c,
@@ -149,22 +145,20 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
             // ── Trusted Senders ──────────────────────────────────────────
             item {
-                SectionCard(title = "🏦 Trusted Senders") {
+                SectionCard("🏦 Trusted Senders") {
                     Text(
-                        "Only SMS from these senders will be scanned. Add your bank's name or number (e.g. QNB, DOHA BANK, +97444xxxxxx).",
+                        "Only SMS from these senders will be scanned. " +
+                        "Add your bank's name or number (e.g. QNB, DOHA BANK).",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(10.dp))
-                    ChipGroup(
-                        items = settings.trustedSenders,
-                        onRemove = { viewModel.removeSender(it) }
-                    )
+                    ChipGroup(items = settings.trustedSenders, onRemove = { viewModel.removeSender(it) })
                     Spacer(Modifier.height(8.dp))
                     AddItemRow(
                         value = state.newSenderInput,
                         onValueChange = { viewModel.onNewSenderInput(it) },
-                        placeholder = "e.g. QNB or +97444123456",
+                        placeholder = "e.g. QNB or +974xxxxxxxx",
                         onAdd = { viewModel.addSender() }
                     )
                 }
@@ -172,12 +166,10 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
             // ── Debit Keywords ───────────────────────────────────────────
             item {
-                SectionCard(title = "🔍 Debit Detection Keywords") {
-                    Text(
-                        "SMS containing any of these words will be treated as a debit transaction.",
+                SectionCard("🔍 Debit Detection Keywords") {
+                    Text("SMS containing any of these words will be treated as a debit transaction.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(10.dp))
                     ChipGroup(
                         items = settings.debitKeywords,
@@ -196,12 +188,10 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
             // ── Credit Keywords ──────────────────────────────────────────
             item {
-                SectionCard(title = "🚫 Ignore (Credit) Keywords") {
-                    Text(
-                        "SMS containing these words will be ignored (credits, refunds, etc.).",
+                SectionCard("🚫 Ignore (Credit) Keywords") {
+                    Text("SMS containing these words will be ignored.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(10.dp))
                     ChipGroup(
                         items = settings.creditKeywords,
@@ -226,16 +216,17 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                         containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                     )
                 ) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column(
+                        Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
                         Text("🔒 Privacy & Security", fontWeight = FontWeight.SemiBold)
-                        Text("• SMS is read locally on your device only",
-                            style = MaterialTheme.typography.bodySmall)
-                        Text("• No data is sent to any server or third party",
-                            style = MaterialTheme.typography.bodySmall)
-                        Text("• Only messages from your trusted senders are processed",
-                            style = MaterialTheme.typography.bodySmall)
-                        Text("• You can revoke SMS permission anytime in Android Settings",
-                            style = MaterialTheme.typography.bodySmall)
+                        listOf(
+                            "SMS is read locally on your device only",
+                            "No data is sent to any server or third party",
+                            "Only messages from your trusted senders are processed",
+                            "You can revoke SMS permission anytime in Android Settings"
+                        ).forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
                     }
                 }
             }
@@ -243,18 +234,6 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             item { Spacer(Modifier.height(80.dp)) }
         }
     }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun FlowRow(
-    horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
-    content: @Composable () -> Unit
-) {
-    androidx.compose.foundation.layout.FlowRow(
-        horizontalArrangement = horizontalArrangement,
-        content = content
-    )
 }
 
 @Composable
@@ -276,7 +255,7 @@ fun SectionCard(title: String, content: @Composable ColumnScope.() -> Unit) {
 fun ChipGroup(
     items: List<String>,
     onRemove: (String) -> Unit,
-    chipColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.secondaryContainer
+    chipColor: Color = MaterialTheme.colorScheme.secondaryContainer
 ) {
     if (items.isEmpty()) {
         Text("None added yet",
@@ -284,9 +263,10 @@ fun ChipGroup(
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         return
     }
-    androidx.compose.foundation.layout.FlowRow(
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth()
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         items.forEach { item ->
             InputChip(
@@ -325,10 +305,7 @@ fun AddItemRow(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { onAdd() })
         )
-        FilledIconButton(
-            onClick = onAdd,
-            enabled = value.isNotBlank()
-        ) {
+        FilledIconButton(onClick = onAdd, enabled = value.isNotBlank()) {
             Icon(Icons.Default.Add, "Add")
         }
     }

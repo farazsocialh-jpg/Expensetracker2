@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.expensetracker.domain.model.Budget
 import com.expensetracker.domain.model.ExpenseCategory
+import com.expensetracker.presentation.dashboard.formatAmount
 import com.expensetracker.presentation.ui.theme.CategoryColors
 import java.time.LocalDate
 import kotlin.math.min
@@ -99,11 +100,11 @@ fun BudgetSummaryHeader(state: BudgetUiState) {
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.Bottom) {
-                Text("QAR ${"%,.0f".format(totalSpent)}",
+                Text(formatAmount(totalSpent),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer)
-                Text(" / QAR ${"%,.0f".format(totalBudget)}",
+                Text(" / ${formatAmount(totalBudget)}",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f))
             }
@@ -141,8 +142,7 @@ fun BudgetCategoryCard(
         colors = CardDefaults.cardColors(
             containerColor = if (isOver)
                 MaterialTheme.colorScheme.error.copy(alpha = 0.08f)
-            else
-                MaterialTheme.colorScheme.surfaceVariant
+            else MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -161,13 +161,13 @@ fun BudgetCategoryCard(
                         trackColor = color.copy(alpha = 0.2f)
                     )
                     Spacer(Modifier.height(4.dp))
-                    Text("QAR ${"%,.0f".format(spent)} / QAR ${"%,.0f".format(limit)}",
+                    Text("${formatAmount(spent)} / ${formatAmount(limit)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isOver) MaterialTheme.colorScheme.error
                                 else MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     Text(
-                        if (spent > 0) "QAR ${"%,.0f".format(spent)} spent · no budget set"
+                        if (spent > 0) "${formatAmount(spent)} spent · no budget set"
                         else "No budget set",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -177,8 +177,7 @@ fun BudgetCategoryCard(
                 Icon(
                     if (hasBudget) Icons.Default.Edit else Icons.Default.Add,
                     contentDescription = "Edit",
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                    tint = MaterialTheme.colorScheme.primary)
             }
             if (hasBudget) {
                 IconButton(onClick = onDelete) {
@@ -194,7 +193,6 @@ fun BudgetCategoryCard(
 @Composable
 fun BudgetDialog(budget: Budget, onDismiss: () -> Unit, onSave: (Budget) -> Unit) {
     var amount by remember { mutableStateOf(if (budget.monthlyLimit > 0) budget.monthlyLimit.toString() else "") }
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("${budget.category.emoji} ${budget.category.displayName} Budget") },
@@ -202,7 +200,7 @@ fun BudgetDialog(budget: Budget, onDismiss: () -> Unit, onSave: (Budget) -> Unit
             OutlinedTextField(
                 value = amount,
                 onValueChange = { amount = it },
-                label = { Text("Monthly limit (QAR )") },
+                label = { Text("Monthly limit (QAR)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true

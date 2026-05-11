@@ -4,7 +4,6 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -53,19 +52,13 @@ fun DashboardScreen(
         item {
             val summaries = state.stats?.categorySummaries ?: emptyList()
             if (summaries.isNotEmpty()) {
-                SpendingDonutChart(
-                    summaries = summaries,
-                    total = state.stats!!.monthlyTotal
-                )
+                SpendingDonutChart(summaries = summaries, total = state.stats!!.monthlyTotal)
             }
         }
         item {
             val summaries = state.stats?.categorySummaries ?: emptyList()
             if (summaries.isNotEmpty()) {
-                CategoryBreakdown(
-                    summaries = summaries,
-                    onSeeAll = onNavigateToBudget
-                )
+                CategoryBreakdown(summaries = summaries, onSeeAll = onNavigateToBudget)
             }
         }
         item {
@@ -91,10 +84,7 @@ fun DashboardHeader(daily: Double, weekly: Double, monthly: Double) {
             .fillMaxWidth()
             .background(
                 Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                        Color.Transparent
-                    )
+                    listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), Color.Transparent)
                 )
             )
             .padding(20.dp)
@@ -119,6 +109,8 @@ fun DashboardHeader(daily: Double, weekly: Double, monthly: Double) {
     }
 }
 
+fun formatAmount(amount: Double): String = "QAR ${"%,.2f".format(amount)}"
+
 @Composable
 fun SpendingCard(label: String, amount: Double, modifier: Modifier = Modifier) {
     Card(
@@ -134,8 +126,8 @@ fun SpendingCard(label: String, amount: Double, modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(4.dp))
-            Text("${currency}${"%,.0f".format(amount)}",
-                style = MaterialTheme.typography.titleMedium,
+            Text(formatAmount(amount),
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary)
         }
@@ -172,14 +164,12 @@ fun SpendingDonutChart(summaries: List<CategorySummary>, total: Double) {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Box(
-                                modifier = Modifier.size(10.dp).clip(CircleShape).background(color)
-                            )
+                            Box(Modifier.size(10.dp).clip(CircleShape).background(color))
                             Text(summary.category.displayName,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.weight(1f))
-                            Text("${currency}${"%,.0f".format(summary.totalAmount)}",
+                            Text(formatAmount(summary.totalAmount),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.SemiBold)
                         }
@@ -198,8 +188,9 @@ fun DonutChart(
     size: Dp
 ) {
     val colors = summaries.map { CategoryColors[it.category.name] ?: Color.Gray }
-    val sweeps = if (total > 0) summaries.map { ((it.totalAmount / total) * 360f * animProgress).toFloat() }
-                 else summaries.map { 0f }
+    val sweeps = if (total > 0)
+        summaries.map { ((it.totalAmount / total) * 360f * animProgress).toFloat() }
+    else summaries.map { 0f }
 
     Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
         androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
@@ -216,8 +207,8 @@ fun DonutChart(
             }
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("${currency}${"%,.0f".format(total * animProgress)}",
-                style = MaterialTheme.typography.titleSmall,
+            Text(formatAmount(total * animProgress),
+                style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold)
             Text("total",
                 style = MaterialTheme.typography.labelSmall,
@@ -260,8 +251,7 @@ fun CategoryRow(summary: CategorySummary) {
         colors = CardDefaults.cardColors(
             containerColor = if (isOverBudget)
                 MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
-            else
-                MaterialTheme.colorScheme.surfaceVariant
+            else MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Column(Modifier.padding(14.dp)) {
@@ -277,12 +267,12 @@ fun CategoryRow(summary: CategorySummary) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("${currency}${"%,.0f".format(summary.totalAmount)}",
+                    Text(formatAmount(summary.totalAmount),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = if (isOverBudget) MaterialTheme.colorScheme.error else color)
                     if (summary.budgetLimit != null) {
-                        Text("of QAR ${"%,.0f".format(summary.budgetLimit)}",
+                        Text("of ${formatAmount(summary.budgetLimit)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -297,12 +287,10 @@ fun CategoryRow(summary: CategorySummary) {
                     trackColor = color.copy(alpha = 0.2f)
                 )
                 if (isOverBudget && summary.budgetLimit != null) {
-                    Text(
-                        "⚠️ Exceeded by QAR ${"%,.0f".format(summary.totalAmount - summary.budgetLimit)}",
+                    Text("⚠️ Exceeded by ${formatAmount(summary.totalAmount - summary.budgetLimit)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
+                        modifier = Modifier.padding(top = 4.dp))
                 }
             }
         }
@@ -358,12 +346,13 @@ fun TransactionItem(
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1)
                 Text(
-                    "${transaction.category.displayName} • ${transaction.dateTime.format(DateTimeFormatter.ofPattern("MMM d, h:mm a"))}",
+                    "${transaction.category.displayName} • ${transaction.dateTime.format(
+                        DateTimeFormatter.ofPattern("MMM d, h:mm a"))}",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text("-${currency}${"%,.2f".format(transaction.amount)}",
+                Text("-${formatAmount(transaction.amount)}",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.error)

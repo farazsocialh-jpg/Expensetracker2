@@ -141,7 +141,7 @@ fun AddEditTransactionDialog(
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it },
-                    label = { Text("Amount (QAR )") },
+                    label = { Text("Amount (QAR)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
@@ -189,17 +189,15 @@ fun AddEditTransactionDialog(
         confirmButton = {
             Button(onClick = {
                 val amt = amount.toDoubleOrNull() ?: return@Button
-                onSave(
-                    Transaction(
-                        id = transaction?.id ?: 0L,
-                        amount = amt,
-                        merchant = merchant.ifBlank { "Unknown" },
-                        category = selectedCategory,
-                        dateTime = transaction?.dateTime ?: LocalDateTime.now(),
-                        isManual = true,
-                        note = note
-                    )
-                )
+                onSave(Transaction(
+                    id = transaction?.id ?: 0L,
+                    amount = amt,
+                    merchant = merchant.ifBlank { "Unknown" },
+                    category = selectedCategory,
+                    dateTime = transaction?.dateTime ?: LocalDateTime.now(),
+                    isManual = true,
+                    note = note
+                ))
             }) { Text("Save") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
