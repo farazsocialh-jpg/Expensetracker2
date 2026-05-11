@@ -15,10 +15,7 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE category = :category ORDER BY dateTime DESC")
     fun getTransactionsByCategory(category: String): Flow<List<TransactionEntity>>
 
-    @Query("SELECT * FROM transactions WHERE dateTime >= :startDate AND dateTime <= :endDate AND category = :category ORDER BY dateTime DESC")
-    fun getTransactionsByDateAndCategory(startDate: String, endDate: String, category: String): Flow<List<TransactionEntity>>
-
-    @Query("SELECT * FROM transactions WHERE merchant LIKE '%' || :query || '%' OR note LIKE '%' || :query || '%' ORDER BY dateTime DESC")
+    @Query("SELECT * FROM transactions WHERE merchant LIKE '%' || :query || '%' OR note LIKE '%' || :query || '%' OR sender LIKE '%' || :query || '%' ORDER BY dateTime DESC")
     fun searchTransactions(query: String): Flow<List<TransactionEntity>>
 
     @Query("SELECT SUM(amount) FROM transactions WHERE dateTime >= :startDate AND dateTime <= :endDate")
@@ -36,14 +33,20 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions ORDER BY dateTime DESC LIMIT :limit")
     fun getRecentTransactions(limit: Int): Flow<List<TransactionEntity>>
 
+    @Query("SELECT DISTINCT cardNumber FROM transactions WHERE cardNumber != '' ORDER BY cardNumber")
+    fun getDistinctCards(): Flow<List<String>>
+
+    @Query("SELECT * FROM transactions WHERE cardNumber = :card ORDER BY dateTime DESC")
+    fun getTransactionsByCard(card: String): Flow<List<TransactionEntity>>
+
+    @Query("UPDATE transactions SET accountLabel = :label WHERE cardNumber = :cardNumber")
+    suspend fun updateAccountLabel(cardNumber: String, label: String)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTransaction(transaction: TransactionEntity): Long
 
     @Update
     suspend fun updateTransaction(transaction: TransactionEntity)
-
-    @Delete
-    suspend fun deleteTransaction(transaction: TransactionEntity)
 
     @Query("DELETE FROM transactions WHERE id = :id")
     suspend fun deleteById(id: Long)

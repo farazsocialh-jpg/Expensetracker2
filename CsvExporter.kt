@@ -10,31 +10,33 @@ import java.time.format.DateTimeFormatter
 
 object CsvExporter {
 
-    private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+    private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
     fun exportToFile(context: Context, transactions: List<Transaction>): File {
         val file = File(context.cacheDir, "expenses_${System.currentTimeMillis()}.csv")
-        FileWriter(file).use { writer ->
-            // Header
-            writer.appendLine("Date,Time,Merchant,Category,Amount,Balance,Note,Source")
-            // Rows
+        FileWriter(file).use { w ->
+            w.appendLine("Date,Time,Merchant,Category,Amount (QAR),Balance,Card,Account,Note,Source,SMS")
             transactions.forEach { t ->
-                writer.appendLine(
-                    listOf(
-                        t.dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
-                        t.dateTime.format(DateTimeFormatter.ofPattern("HH:mm")),
-                        "\"${t.merchant.replace("\"", "\"\"")}\"",
-                        t.category.displayName,
-                        t.amount.toString(),
-                        t.balance?.toString() ?: "",
-                        "\"${t.note.replace("\"", "\"\"")}\"",
-                        if (t.isManual) "Manual" else "SMS"
-                    ).joinToString(",")
-                )
+                w.appendLine(listOf(
+                    t.dateTime.format(dateFormatter),
+                    t.dateTime.format(timeFormatter),
+                    csvEscape(t.merchant),
+                    t.category.displayName,
+                    t.amount.toString(),
+                    t.balance?.toString() ?: "",
+                    t.cardNumber,
+                    csvEscape(t.accountLabel),
+                    csvEscape(t.note),
+                    if (t.isManual) "Manual" else "SMS",
+                    csvEscape(t.rawSms ?: "")
+                ).joinToString(","))
             }
         }
         return file
     }
+
+    private fun csvEscape(value: String): String = "\"${value.replace("\"", "\"\"")}\""
 
     fun shareFile(context: Context, file: File) {
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)

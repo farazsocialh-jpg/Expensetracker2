@@ -26,7 +26,9 @@ data class Transaction(
     val rawSms: String? = null,
     val isManual: Boolean = false,
     val note: String = "",
-    val sender: String = ""
+    val sender: String = "",
+    val cardNumber: String = "",   // last 4 digits extracted from SMS e.g. "4321"
+    val accountLabel: String = ""  // user-assigned label e.g. "QNB Visa"
 )
 
 data class Budget(
@@ -52,7 +54,6 @@ data class DashboardStats(
     val recentTransactions: List<Transaction>
 )
 
-// User settings stored in DataStore
 data class AppSettings(
     val currencySymbol: String = "QAR",
     val trustedSenders: List<String> = listOf("QNB", "DOHA BANK", "CBQ", "MASRAF", "HSBC", "QIIB", "DUKHAN", "AHLIBANK"),

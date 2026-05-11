@@ -2,8 +2,6 @@ package com.expensetracker.data.db
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.expensetracker.domain.model.ExpenseCategory
-import java.time.LocalDateTime
 
 @Entity(tableName = "transactions")
 data class TransactionEntity(
@@ -11,13 +9,16 @@ data class TransactionEntity(
     val id: Long = 0,
     val amount: Double,
     val merchant: String,
-    val category: String, // Store as String enum name
-    val dateTime: String, // ISO-8601 string
+    val category: String,
+    val dateTime: String,
     val balance: Double?,
     val rawSms: String?,
     val isManual: Boolean,
     val note: String,
-    val smsHash: String? = null // For dedup
+    val smsHash: String? = null,
+    val sender: String = "",
+    val cardNumber: String = "",
+    val accountLabel: String = ""
 )
 
 @Entity(tableName = "budgets")

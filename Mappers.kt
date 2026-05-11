@@ -13,12 +13,15 @@ fun TransactionEntity.toDomain() = Transaction(
     id = id,
     amount = amount,
     merchant = merchant,
-    category = ExpenseCategory.valueOf(category),
+    category = try { ExpenseCategory.valueOf(category) } catch (e: Exception) { ExpenseCategory.OTHER },
     dateTime = LocalDateTime.parse(dateTime, FORMATTER),
     balance = balance,
     rawSms = rawSms,
     isManual = isManual,
-    note = note
+    note = note,
+    sender = sender,
+    cardNumber = cardNumber,
+    accountLabel = accountLabel
 )
 
 fun Transaction.toEntity() = TransactionEntity(
@@ -30,7 +33,10 @@ fun Transaction.toEntity() = TransactionEntity(
     balance = balance,
     rawSms = rawSms,
     isManual = isManual,
-    note = note
+    note = note,
+    sender = sender,
+    cardNumber = cardNumber,
+    accountLabel = accountLabel
 )
 
 fun SmsParser.ParsedTransaction.toEntity() = TransactionEntity(
@@ -42,8 +48,17 @@ fun SmsParser.ParsedTransaction.toEntity() = TransactionEntity(
     rawSms = rawSms,
     isManual = false,
     note = "",
-    smsHash = smsHash
+    smsHash = smsHash,
+    sender = sender,
+    cardNumber = extractCardNumber(rawSms ?: ""),
+    accountLabel = ""
 )
+
+/** Extract last 4 digits of card number from SMS text */
+fun extractCardNumber(sms: String): String {
+    val pattern = Regex("""(?:card|a/c|ac|account)\s*(?:no\.?|number|ending|XX+)?[\s*X]*(\d{4})\b""", RegexOption.IGNORE_CASE)
+    return pattern.find(sms)?.groupValues?.get(1) ?: ""
+}
 
 fun BudgetEntity.toDomain() = Budget(
     id = id,
