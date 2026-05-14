@@ -2,10 +2,9 @@ package com.expensetracker.presentation.budget
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.expensetracker.data.repository.SettingsRepository
 import com.expensetracker.data.repository.TransactionRepository
-import com.expensetracker.domain.model.Budget
-import com.expensetracker.domain.model.CategorySummary
-import com.expensetracker.domain.model.ExpenseCategory
+import com.expensetracker.domain.model.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -16,38 +15,41 @@ data class BudgetUiState(
     val budgets: List<Budget> = emptyList(),
     val summaries: List<CategorySummary> = emptyList(),
     val showDialog: Boolean = false,
-    val editingBudget: Budget? = null
+    val editingBudget: Budget? = null,
+    val monthStartDay: Int = 1
 )
 
 @HiltViewModel
 class BudgetViewModel @Inject constructor(
-    private val repository: TransactionRepository
+    private val repo: TransactionRepository,
+    private val settingsRepo: SettingsRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(BudgetUiState())
-    val uiState: StateFlow<BudgetUiState> = _uiState.asStateFlow()
+    private val _state = MutableStateFlow(BudgetUiState())
+    val state: StateFlow<BudgetUiState> = _state.asStateFlow()
 
     init {
         val now = LocalDate.now()
-        repository.getBudgetsForMonth(now.monthValue, now.year)
-            .onEach { budgets ->
-                _uiState.update { it.copy(budgets = budgets) }
-                loadSummaries()
-            }
+        settingsRepo.settings.onEach { s ->
+            _state.update { it.copy(monthStartDay = s.monthStartDay) }
+        }.launchIn(viewModelScope)
+
+        repo.getBudgetsForMonth(now.monthValue, now.year)
+            .onEach { budgets -> _state.update { it.copy(budgets = budgets) }; loadSummaries() }
             .launchIn(viewModelScope)
     }
 
     private fun loadSummaries() {
         viewModelScope.launch {
-            val stats = repository.getDashboardStats()
-            _uiState.update { it.copy(summaries = stats.categorySummaries) }
+            val stats = repo.getDashboardStats(monthStartDay = _state.value.monthStartDay)
+            _state.update { it.copy(summaries = stats.categorySummaries) }
         }
     }
 
     fun showAddDialog(category: ExpenseCategory? = null) {
         val now = LocalDate.now()
-        val existing = _uiState.value.budgets.find { it.category == category }
-        _uiState.update {
+        val existing = _state.value.budgets.find { it.category == category }
+        _state.update {
             it.copy(
                 showDialog = true,
                 editingBudget = existing ?: Budget(
@@ -60,16 +62,13 @@ class BudgetViewModel @Inject constructor(
         }
     }
 
-    fun hideDialog() = _uiState.update { it.copy(showDialog = false, editingBudget = null) }
+    fun hideDialog() = _state.update { it.copy(showDialog = false, editingBudget = null) }
 
-    fun saveBudget(budget: Budget) {
-        viewModelScope.launch {
-            repository.saveBudget(budget)
-            hideDialog()
-        }
+    fun saveBudget(b: Budget) {
+        viewModelScope.launch { repo.saveBudget(b); hideDialog() }
     }
 
-    fun deleteBudget(budget: Budget) {
-        viewModelScope.launch { repository.deleteBudget(budget) }
+    fun deleteBudget(b: Budget) {
+        viewModelScope.launch { repo.deleteBudget(b) }
     }
 }

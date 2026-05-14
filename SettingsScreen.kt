@@ -21,240 +21,179 @@ import androidx.hilt.navigation.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
-    val state by viewModel.uiState.collectAsState()
+fun SettingsScreen(onNavigateToRules: () -> Unit = {}, viewModel: SettingsViewModel = hiltViewModel()) {
+    val state    by viewModel.state.collectAsState()
     val settings = state.settings
     val progress = state.scanProgress
 
     if (progress.done) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissScanResult() },
-            title = { Text(if (progress.error != null) "Scan Failed" else "Scan Complete ✅") },
+            title = { Text(if (progress.error != null) "Scan Failed" else "✅ Scan Complete") },
             text = {
-                if (progress.error != null) {
-                    Text("Error: ${progress.error}")
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Scanned ${progress.scanned} bank messages")
-                        Text("Imported ${progress.imported} new transactions",
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary)
-                        if (progress.imported == 0) {
-                            Spacer(Modifier.height(4.dp))
-                            Text("No new transactions found. Try adjusting your sender list or keywords.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
+                if (progress.error != null) Text("Error: ${progress.error}")
+                else Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Scanned ${progress.scanned} messages")
+                    Text("Imported ${progress.imported} new transactions",
+                        fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    if (progress.imported == 0)
+                        Text("Try adding your bank name to Trusted Senders.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             confirmButton = { Button(onClick = { viewModel.dismissScanResult() }) { Text("OK") } }
         )
     }
 
-    Scaffold(
-        topBar = { TopAppBar(title = { Text("Settings", fontWeight = FontWeight.Bold) }) }
-    ) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text("Settings", fontWeight = FontWeight.Bold) }) }) { padding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
+            Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-
-            // ── Scan Inbox ────────────────────────────────────────────────
+            // ── Scan ────────────────────────────────────────────────────
             item {
                 SectionCard("📥 Scan Existing SMS") {
-                    Text(
-                        "Scan your SMS inbox to import past bank transactions. " +
-                        "Only messages from your trusted senders are read. All data stays on your device.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(12.dp))
+                    Text("Import past bank transactions from your inbox. Only trusted senders are read. 100% offline.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(10.dp))
                     if (progress.isScanning) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             LinearProgressIndicator(
-                                progress = {
-                                    if (progress.total > 0) progress.scanned.toFloat() / progress.total else 0f
-                                },
-                                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp))
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            Text("Scanning ${progress.scanned} / ${progress.total} messages…",
-                                style = MaterialTheme.typography.bodySmall)
+                                progress = { if (progress.total > 0) progress.scanned.toFloat() / progress.total else 0f },
+                                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)))
+                            Spacer(Modifier.height(6.dp))
+                            Text("Scanning ${progress.scanned} / ${progress.total}…", style = MaterialTheme.typography.bodySmall)
                         }
                     } else {
-                        Button(
-                            onClick = { viewModel.scanInbox() },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.Search, null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Scan SMS Inbox Now")
+                        Button(onClick = { viewModel.scanInbox() }, modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)) {
+                            Icon(Icons.Default.Search, null); Spacer(Modifier.width(8.dp)); Text("Scan SMS Inbox Now")
                         }
                     }
                 }
             }
 
-            // ── Auto Scan Toggle ─────────────────────────────────────────
+            // ── Merchant Rules ──────────────────────────────────────────
+            item {
+                Card(shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    onClick = onNavigateToRules) {
+                    Row(Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("🏪", fontSize = 22.sp)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Merchant Rules", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                            Text("Auto-categorization rules", style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+
+                        // ── Appearance ──────────────────────────────────────────────
+            item {
+                SectionCard("🎨 Appearance") {
+                    ToggleRow("Dark Mode", settings.darkTheme) { viewModel.toggleDarkTheme(it) }
+                    ToggleRow("AMOLED Black", settings.amoledTheme) { viewModel.toggleAmoled(it) }
+                    ToggleRow("Hide Balances", settings.hideBalances) { viewModel.toggleHideBalances(it) }
+                }
+            }
+
+            // ── Auto Import ─────────────────────────────────────────────
             item {
                 SectionCard("🔄 Auto-Import New SMS") {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Auto-import incoming SMS", style = MaterialTheme.typography.bodyMedium)
-                            Text("Automatically detect bank SMS as they arrive",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Switch(checked = settings.autoScanEnabled, onCheckedChange = { viewModel.toggleAutoScan(it) })
-                    }
+                    ToggleRow("Auto-import incoming bank SMS", settings.autoScanEnabled) { viewModel.toggleAutoScan(it) }
                 }
             }
 
-            // ── Month Start Day ──────────────────────────────────────────
+            // ── Month Start Day ─────────────────────────────────────────
             item {
                 SectionCard("📅 Month Start Day") {
-                    Text(
-                        "Set the day your billing cycle or month starts. " +
-                        "'This Month' filter will use this day as the start.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Text("Day ${settings.monthStartDay}",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary)
-                        Column {
-                            Text("of each month", style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("(1–28)", style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
+                    Text("'This Month' filter starts from day ${settings.monthStartDay} of each month.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(8.dp))
-                    Slider(
-                        value = settings.monthStartDay.toFloat(),
-                        onValueChange = { viewModel.setMonthStartDay(it.toInt()) },
-                        valueRange = 1f..28f,
-                        steps = 26,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    // Quick picks
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        listOf(1, 5, 10, 15, 20, 25, 28).forEach { day ->
-                            FilterChip(
-                                selected = settings.monthStartDay == day,
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Day ${settings.monthStartDay}", style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Slider(value = settings.monthStartDay.toFloat(),
+                            onValueChange = { viewModel.setMonthStartDay(it.toInt()) },
+                            valueRange = 1f..28f, steps = 26, modifier = Modifier.weight(1f))
+                    }
+                    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf(1,5,10,15,20,25,28).forEach { day ->
+                            FilterChip(selected = settings.monthStartDay == day,
                                 onClick = { viewModel.setMonthStartDay(day) },
-                                label = { Text("$day") }
-                            )
+                                label = { Text("$day") })
                         }
                     }
                 }
             }
 
-            // ── Currency ─────────────────────────────────────────────────
+            // ── Currency ────────────────────────────────────────────────
             item {
                 SectionCard("💱 Currency") {
-                    Text("Select your currency:", style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(8.dp))
-                    val currencies = listOf("QAR","AED","SAR","KWD","BHD","OMR","USD","EUR","GBP","INR")
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        currencies.forEach { c ->
-                            FilterChip(
-                                selected = settings.currencySymbol == c,
-                                onClick = { viewModel.setCurrency(c) },
-                                label = { Text(c) }
-                            )
+                    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf("QAR","AED","SAR","KWD","BHD","OMR","USD","EUR","GBP","INR").forEach { c ->
+                            FilterChip(selected = settings.currencySymbol == c,
+                                onClick = { viewModel.setCurrency(c) }, label = { Text(c) })
                         }
                     }
                 }
             }
 
-            // ── Trusted Senders ──────────────────────────────────────────
+            // ── Trusted Senders ─────────────────────────────────────────
             item {
                 SectionCard("🏦 Trusted Senders") {
-                    Text("Only SMS from these senders will be scanned. Add your bank name or number.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(10.dp))
-                    ChipGroup(items = settings.trustedSenders, onRemove = { viewModel.removeSender(it) })
+                    Text("Only SMS from these senders are scanned. Add your bank name or short code.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(8.dp))
-                    AddItemRow(
-                        value = state.newSenderInput,
-                        onValueChange = { viewModel.onNewSenderInput(it) },
-                        placeholder = "e.g. QNB or +974xxxxxxxx",
-                        onAdd = { viewModel.addSender() }
-                    )
+                    ChipGroup(settings.trustedSenders, onRemove = { viewModel.removeSender(it) })
+                    Spacer(Modifier.height(8.dp))
+                    AddItemRow(state.newSenderInput, { viewModel.onNewSenderInput(it) }, "e.g. QNB or +97444xxxxxx") { viewModel.addSender() }
                 }
             }
 
-            // ── Debit Keywords ───────────────────────────────────────────
+            // ── Debit Keywords ──────────────────────────────────────────
             item {
-                SectionCard("🔍 Debit Detection Keywords") {
-                    Text("SMS containing any of these words will be treated as a debit transaction.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(10.dp))
-                    ChipGroup(items = settings.debitKeywords, onRemove = { viewModel.removeDebitKeyword(it) },
+                SectionCard("🔍 Debit Keywords") {
+                    Text("SMS with these words are treated as expenses.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(8.dp))
+                    ChipGroup(settings.debitKeywords, onRemove = { viewModel.removeDebitKeyword(it) },
                         chipColor = MaterialTheme.colorScheme.errorContainer)
                     Spacer(Modifier.height(8.dp))
-                    AddItemRow(
-                        value = state.newDebitKeyword,
-                        onValueChange = { viewModel.onNewDebitKeyword(it) },
-                        placeholder = "e.g. debited",
-                        onAdd = { viewModel.addDebitKeyword() }
-                    )
+                    AddItemRow(state.newDebitKeyword, { viewModel.onNewDebitKeyword(it) }, "e.g. debited") { viewModel.addDebitKeyword() }
                 }
             }
 
-            // ── Credit Keywords ──────────────────────────────────────────
+            // ── Ignore Keywords ─────────────────────────────────────────
             item {
-                SectionCard("🚫 Ignore (Credit) Keywords") {
-                    Text("SMS containing these words will be ignored.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(10.dp))
-                    ChipGroup(items = settings.creditKeywords, onRemove = { viewModel.removeCreditKeyword(it) },
+                SectionCard("🚫 Ignore Keywords") {
+                    Text("SMS with these words are ignored (credits, refunds).",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(8.dp))
+                    ChipGroup(settings.creditKeywords, onRemove = { viewModel.removeCreditKeyword(it) },
                         chipColor = MaterialTheme.colorScheme.primaryContainer)
                     Spacer(Modifier.height(8.dp))
-                    AddItemRow(
-                        value = state.newCreditKeyword,
-                        onValueChange = { viewModel.onNewCreditKeyword(it) },
-                        placeholder = "e.g. credited",
-                        onAdd = { viewModel.addCreditKeyword() }
-                    )
+                    AddItemRow(state.newCreditKeyword, { viewModel.onNewCreditKeyword(it) }, "e.g. credited") { viewModel.addCreditKeyword() }
                 }
             }
 
-            // ── Privacy Notice ───────────────────────────────────────────
+            // ── Privacy ─────────────────────────────────────────────────
             item {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
-                ) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("🔒 Privacy & Security", fontWeight = FontWeight.SemiBold)
-                        listOf(
-                            "SMS is read locally on your device only",
-                            "No data is sent to any server or third party",
-                            "Only messages from your trusted senders are processed",
-                            "You can revoke SMS permission anytime in Android Settings"
+                Card(shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("🔒 Privacy", fontWeight = FontWeight.SemiBold)
+                        listOf("All data stored locally on your device only",
+                            "No internet connection used — ever",
+                            "SMS read locally, never transmitted",
+                            "Revoke SMS permission anytime in Android Settings"
                         ).forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
                     }
                 }
@@ -266,14 +205,20 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 }
 
 @Composable
+fun ToggleRow(label: String, checked: Boolean, onToggle: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onToggle)
+    }
+}
+
+@Composable
 fun SectionCard(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
+    Card(shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
         Column(Modifier.padding(16.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
             content()
         }
     }
@@ -281,32 +226,22 @@ fun SectionCard(title: String, content: @Composable ColumnScope.() -> Unit) {
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun ChipGroup(
-    items: List<String>,
-    onRemove: (String) -> Unit,
-    chipColor: Color = MaterialTheme.colorScheme.secondaryContainer
-) {
+fun ChipGroup(items: List<String>, onRemove: (String) -> Unit,
+              chipColor: Color = MaterialTheme.colorScheme.secondaryContainer) {
     if (items.isEmpty()) {
-        Text("None added yet", style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        return
+        Text("None added", style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant); return
     }
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
+    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)) {
         items.forEach { item ->
-            InputChip(
-                selected = false, onClick = {},
-                label = { Text(item, fontSize = 12.sp) },
+            InputChip(selected = false, onClick = {}, label = { Text(item, fontSize = 12.sp) },
                 trailingIcon = {
-                    IconButton(onClick = { onRemove(item) }, modifier = Modifier.size(18.dp)) {
-                        Icon(Icons.Default.Close, null, modifier = Modifier.size(14.dp))
+                    IconButton(onClick = { onRemove(item) }, Modifier.size(18.dp)) {
+                        Icon(Icons.Default.Close, null, Modifier.size(14.dp))
                     }
                 },
-                colors = InputChipDefaults.inputChipColors(containerColor = chipColor)
-            )
+                colors = InputChipDefaults.inputChipColors(containerColor = chipColor))
         }
     }
 }
@@ -314,16 +249,12 @@ fun ChipGroup(
 @Composable
 fun AddItemRow(value: String, onValueChange: (String) -> Unit, placeholder: String, onAdd: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
-            value = value, onValueChange = onValueChange,
+        OutlinedTextField(value = value, onValueChange = onValueChange,
             placeholder = { Text(placeholder, fontSize = 13.sp) },
             modifier = Modifier.weight(1f), singleLine = true,
             shape = RoundedCornerShape(10.dp),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { onAdd() })
-        )
-        FilledIconButton(onClick = onAdd, enabled = value.isNotBlank()) {
-            Icon(Icons.Default.Add, "Add")
-        }
+            keyboardActions = KeyboardActions(onDone = { onAdd() }))
+        FilledIconButton(onClick = onAdd, enabled = value.isNotBlank()) { Icon(Icons.Default.Add, null) }
     }
 }

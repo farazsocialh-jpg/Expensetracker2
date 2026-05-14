@@ -14,39 +14,28 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class SmsReceiver : BroadcastReceiver() {
-
-    @Inject lateinit var transactionRepository: TransactionRepository
-    @Inject lateinit var settingsRepository: SettingsRepository
-
+    @Inject lateinit var txRepo: TransactionRepository
+    @Inject lateinit var settingsRepo: SettingsRepository
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
-
         val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent) ?: return
-
         scope.launch {
-            val settings = settingsRepository.settings.first()
-            if (!settings.autoScanEnabled) return@launch
-
+            val s = settingsRepo.settings.first()
+            if (!s.autoScanEnabled) return@launch
             val config = SmsParser.ParserConfig(
-                currencySymbol = settings.currencySymbol,
-                trustedSenders = settings.trustedSenders,
-                debitKeywords = settings.debitKeywords,
-                creditKeywords = settings.creditKeywords
+                currencySymbol = s.currencySymbol,
+                trustedSenders = s.trustedSenders,
+                debitKeywords  = s.debitKeywords,
+                creditKeywords = s.creditKeywords
             )
-
-            messages.forEach { smsMessage ->
-                val body = smsMessage.messageBody ?: return@forEach
-                val sender = smsMessage.originatingAddress ?: ""
-
-                // Only process from trusted senders
+            messages.forEach { msg ->
+                val body   = msg.messageBody ?: return@forEach
+                val sender = msg.originatingAddress ?: ""
                 if (!SmsParser.isTrustedSender(sender, config)) return@forEach
-
-                val parsed = SmsParser.parse(body, sender, LocalDateTime.now(), config)
-                    ?: return@forEach
-
-                transactionRepository.insertFromSms(parsed)
+                val parsed = SmsParser.parse(body, sender, LocalDateTime.now(), config) ?: return@forEach
+                txRepo.insertFromSms(parsed)
             }
         }
     }

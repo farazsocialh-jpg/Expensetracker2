@@ -9,34 +9,35 @@ import java.io.FileWriter
 import java.time.format.DateTimeFormatter
 
 object CsvExporter {
-
-    private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-    private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    private val dateFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    private val timeFmt = DateTimeFormatter.ofPattern("HH:mm")
 
     fun exportToFile(context: Context, transactions: List<Transaction>): File {
         val file = File(context.cacheDir, "expenses_${System.currentTimeMillis()}.csv")
         FileWriter(file).use { w ->
-            w.appendLine("Date,Time,Merchant,Category,Amount (QAR),Balance,Card,Account,Note,Source,SMS")
+            w.appendLine("Date,Time,Merchant,Category,Amount,Currency,Balance,Card,Account,Bank,Recurring,Note,Source")
             transactions.forEach { t ->
                 w.appendLine(listOf(
-                    t.dateTime.format(dateFormatter),
-                    t.dateTime.format(timeFormatter),
-                    csvEscape(t.merchant),
+                    t.dateTime.format(dateFmt),
+                    t.dateTime.format(timeFmt),
+                    esc(t.merchant),
                     t.category.displayName,
                     t.amount.toString(),
+                    t.currency,
                     t.balance?.toString() ?: "",
-                    t.cardNumber,
-                    csvEscape(t.accountLabel),
-                    csvEscape(t.note),
-                    if (t.isManual) "Manual" else "SMS",
-                    csvEscape(t.rawSms ?: "")
+                    t.accountLast4,
+                    esc(t.accountLabel),
+                    esc(t.bankName),
+                    if (t.isRecurring) "Yes" else "No",
+                    esc(t.note),
+                    if (t.isManual) "Manual" else "SMS"
                 ).joinToString(","))
             }
         }
         return file
     }
 
-    private fun csvEscape(value: String): String = "\"${value.replace("\"", "\"\"")}\""
+    private fun esc(v: String) = "\"${v.replace("\"", "\"\"")}\""
 
     fun shareFile(context: Context, file: File) {
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)

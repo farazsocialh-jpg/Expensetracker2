@@ -5,13 +5,12 @@ workflows:
     environment:
       java: 17
     scripts:
-      - name: Reconstruct project folder structure
+      - name: Reconstruct project structure
         script: |
           set -e
-
           mkdir -p gradle/wrapper
           cp gradle-wrapper.properties gradle/wrapper/gradle-wrapper.properties
-          cp libs.versions.toml        gradle/libs.versions.toml
+          cp libs.versions.toml gradle/libs.versions.toml
 
           mkdir -p app/src/main/java/com/expensetracker/data/db
           mkdir -p app/src/main/java/com/expensetracker/data/repository
@@ -25,10 +24,8 @@ workflows:
           mkdir -p app/src/main/java/com/expensetracker/utils
           mkdir -p app/src/main/res/values
           mkdir -p app/src/main/res/xml
-          mkdir -p app/src/main/res/mipmap-mdpi
-          mkdir -p app/src/main/res/mipmap-hdpi
-          mkdir -p app/src/main/res/mipmap-xhdpi
-          mkdir -p app/src/main/res/mipmap-xxhdpi
+          mkdir -p app/src/main/res/mipmap-mdpi app/src/main/res/mipmap-hdpi
+          mkdir -p app/src/main/res/mipmap-xhdpi app/src/main/res/mipmap-xxhdpi
           mkdir -p app/src/main/res/mipmap-xxxhdpi
 
           SRC=app/src/main/java/com/expensetracker
@@ -52,42 +49,35 @@ workflows:
           cp BudgetViewModel.kt       $SRC/presentation/budget/BudgetViewModel.kt
           cp SettingsScreen.kt        $SRC/presentation/settings/SettingsScreen.kt
           cp SettingsViewModel.kt     $SRC/presentation/settings/SettingsViewModel.kt
+          cp MerchantRulesScreen.kt   $SRC/presentation/settings/MerchantRulesScreen.kt
+          cp MerchantRulesViewModel.kt $SRC/presentation/settings/MerchantRulesViewModel.kt
           cp SmsPermissionScreen.kt   $SRC/presentation/SmsPermissionScreen.kt
           cp Theme.kt                 $SRC/presentation/ui/theme/Theme.kt
           cp SmsParser.kt             $SRC/service/SmsParser.kt
           cp SmsReceiver.kt           $SRC/service/SmsReceiver.kt
           cp SmsInboxScanner.kt       $SRC/service/SmsInboxScanner.kt
           cp CsvExporter.kt           $SRC/utils/CsvExporter.kt
-
           cp AndroidManifest.xml      app/src/main/AndroidManifest.xml
           cp strings.xml              app/src/main/res/values/strings.xml
           cp themes.xml               app/src/main/res/values/themes.xml
           cp file_paths.xml           app/src/main/res/xml/file_paths.xml
           cp network_security_config.xml app/src/main/res/xml/network_security_config.xml
 
-          for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-            cp mipmap-${density}/ic_launcher.png       app/src/main/res/mipmap-${density}/ic_launcher.png
-            cp mipmap-${density}/ic_launcher_round.png app/src/main/res/mipmap-${density}/ic_launcher_round.png
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            cp mipmap-${d}/ic_launcher.png       app/src/main/res/mipmap-${d}/ic_launcher.png
+            cp mipmap-${d}/ic_launcher_round.png app/src/main/res/mipmap-${d}/ic_launcher_round.png
           done
-
-          echo "✅ Structure rebuilt"
+          echo "✅ Done"
 
       - name: Download Gradle wrapper jar
         script: |
           curl -sL "https://github.com/gradle/gradle/raw/v8.7.0/gradle/wrapper/gradle-wrapper.jar" \
             -o gradle/wrapper/gradle-wrapper.jar
 
-      - name: Set up local.properties
+      - name: Setup & build
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
-
-      - name: Make gradlew executable
-        script: |
           chmod +x gradlew
-
-      - name: Build debug APK
-        script: |
-          ./gradlew assembleDebug --info 2>&1 | grep -E "error:|warning:|w:|e:" | head -60
           ./gradlew assembleDebug --stacktrace 2>&1
 
     artifacts:

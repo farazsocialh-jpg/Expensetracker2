@@ -2,9 +2,9 @@ package com.expensetracker.presentation.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.expensetracker.data.repository.SettingsRepository
 import com.expensetracker.data.repository.TransactionRepository
-import com.expensetracker.domain.model.DashboardStats
-import com.expensetracker.domain.model.Transaction
+import com.expensetracker.domain.model.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -14,41 +14,44 @@ import javax.inject.Inject
 data class DashboardUiState(
     val stats: DashboardStats? = null,
     val recentTransactions: List<Transaction> = emptyList(),
+    val hideBalances: Boolean = false,
     val isLoading: Boolean = true,
-    val error: String? = null
+    val monthStartDay: Int = 1
 )
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
-    private val repository: TransactionRepository
+    private val repo: TransactionRepository,
+    private val settingsRepo: SettingsRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(DashboardUiState())
-    val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
+    private val _state = MutableStateFlow(DashboardUiState())
+    val state: StateFlow<DashboardUiState> = _state.asStateFlow()
 
     init {
-        loadDashboard()
-        observeRecentTransactions()
+        settingsRepo.settings.onEach { s ->
+            _state.update { it.copy(hideBalances = s.hideBalances, monthStartDay = s.monthStartDay) }
+            loadStats(s.monthStartDay)
+        }.launchIn(viewModelScope)
+
+        repo.getRecent(8).onEach { txns ->
+            _state.update { it.copy(recentTransactions = txns) }
+        }.launchIn(viewModelScope)
     }
 
-    fun loadDashboard() {
+    fun refresh() {
+        loadStats(_state.value.monthStartDay)
+    }
+
+    private fun loadStats(monthStartDay: Int) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            _state.update { it.copy(isLoading = true) }
             try {
-                val stats = repository.getDashboardStats(LocalDate.now())
-                _uiState.update { it.copy(stats = stats, isLoading = false) }
+                val stats = repo.getDashboardStats(LocalDate.now(), monthStartDay)
+                _state.update { it.copy(stats = stats, isLoading = false) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = e.message) }
+                _state.update { it.copy(isLoading = false) }
             }
         }
-    }
-
-    private fun observeRecentTransactions() {
-        repository.getRecentTransactions(5)
-            .onEach { transactions ->
-                _uiState.update { it.copy(recentTransactions = transactions) }
-                loadDashboard() // refresh stats when transactions change
-            }
-            .launchIn(viewModelScope)
     }
 }

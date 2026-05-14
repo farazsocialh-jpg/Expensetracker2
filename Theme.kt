@@ -3,69 +3,68 @@ package com.expensetracker.presentation.ui.theme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import com.expensetracker.domain.model.ExpenseCategory
 
-val PrimaryGreen = Color(0xFF00C853)
-val PrimaryGreenDark = Color(0xFF00BFA5)
-val OnPrimary = Color(0xFF003822)
-val BackgroundDark = Color(0xFF0A1410)
-val SurfaceDark = Color(0xFF0F1A14)
-val SurfaceVariantDark = Color(0xFF1A2E20)
-
-val CategoryColors = mapOf(
-    "FOOD"          to Color(0xFFFF6B35),
-    "GROCERY"       to Color(0xFF4CAF50),
-    "TRANSPORT"     to Color(0xFF2196F3),
-    "FUEL"          to Color(0xFFFF9800),
-    "SHOPPING"      to Color(0xFFE91E63),
-    "BILLS"         to Color(0xFF9C27B0),
-    "HEALTH"        to Color(0xFFF44336),
-    "ENTERTAINMENT" to Color(0xFF00BCD4),
-    "EDUCATION"     to Color(0xFF3F51B5),
-    "TRAVEL"        to Color(0xFF009688),
-    "OTHER"         to Color(0xFF607D8B)
-)
+val CategoryColors = ExpenseCategory.values().associate { it.name to Color(it.color) }
 
 private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryGreen,
-    onPrimary = OnPrimary,
+    primary          = Color(0xFF00C853),
+    onPrimary        = Color(0xFF003822),
     primaryContainer = Color(0xFF003822),
     onPrimaryContainer = Color(0xFF9DFFB8),
-    secondary = PrimaryGreenDark,
-    background = BackgroundDark,
-    surface = SurfaceDark,
-    surfaceVariant = SurfaceVariantDark,
-    onBackground = Color(0xFFE0F2E8),
-    onSurface = Color(0xFFE0F2E8),
+    secondary        = Color(0xFF00BFA5),
+    background       = Color(0xFF0A1410),
+    surface          = Color(0xFF0F1A14),
+    surfaceVariant   = Color(0xFF1A2E20),
+    onBackground     = Color(0xFFE0F2E8),
+    onSurface        = Color(0xFFE0F2E8),
     onSurfaceVariant = Color(0xFFA0BFA8),
-    error = Color(0xFFFF6B6B),
-    outline = Color(0xFF3A5C42)
+    error            = Color(0xFFFF6B6B),
+    outline          = Color(0xFF3A5C42)
+)
+
+private val AmoledColorScheme = darkColorScheme(
+    primary          = Color(0xFF00E676),
+    onPrimary        = Color(0xFF003822),
+    primaryContainer = Color(0xFF002910),
+    onPrimaryContainer = Color(0xFF9DFFB8),
+    secondary        = Color(0xFF00BFA5),
+    background       = Color(0xFF000000),
+    surface          = Color(0xFF0A0A0A),
+    surfaceVariant   = Color(0xFF111111),
+    onBackground     = Color(0xFFE0F2E8),
+    onSurface        = Color(0xFFE0F2E8),
+    onSurfaceVariant = Color(0xFF90A090),
+    error            = Color(0xFFFF5252),
+    outline          = Color(0xFF2A3C2A)
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF00875A),
-    onPrimary = Color(0xFFFFFFFF),
+    primary          = Color(0xFF00875A),
+    onPrimary        = Color(0xFFFFFFFF),
     primaryContainer = Color(0xFFB8F5D0),
     onPrimaryContainer = Color(0xFF002117),
-    secondary = Color(0xFF00796B),
-    background = Color(0xFFEDF7ED),
-    surface = Color(0xFFF5FBF5),
-    surfaceVariant = Color(0xFFDCEEE0),
-    onBackground = Color(0xFF0D2015),
-    onSurface = Color(0xFF0D2015),
+    secondary        = Color(0xFF00796B),
+    background       = Color(0xFFEDF7ED),
+    surface          = Color(0xFFF5FBF5),
+    surfaceVariant   = Color(0xFFDCEEE0),
+    onBackground     = Color(0xFF0D2015),
+    onSurface        = Color(0xFF0D2015),
     onSurfaceVariant = Color(0xFF3D5C46),
-    error = Color(0xFFBA1A1A),
-    outline = Color(0xFF6C9E76)
+    error            = Color(0xFFBA1A1A),
+    outline          = Color(0xFF6C9E76)
 )
 
 @Composable
 fun ExpenseTrackerTheme(
     darkTheme: Boolean = true,
+    amoledTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography(),
-        content = content
-    )
+    val colorScheme = when {
+        amoledTheme -> AmoledColorScheme
+        darkTheme   -> DarkColorScheme
+        else        -> LightColorScheme
+    }
+    MaterialTheme(colorScheme = colorScheme, typography = Typography(), content = content)
 }

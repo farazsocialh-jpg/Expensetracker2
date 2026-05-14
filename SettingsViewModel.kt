@@ -31,89 +31,80 @@ data class SettingsUiState(
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val settingsRepository: SettingsRepository,
-    private val transactionRepository: TransactionRepository,
-    private val smsInboxScanner: SmsInboxScanner
+    private val settingsRepo: SettingsRepository,
+    private val txRepo: TransactionRepository,
+    private val scanner: SmsInboxScanner
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SettingsUiState())
-    val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+    private val _state = MutableStateFlow(SettingsUiState())
+    val state: StateFlow<SettingsUiState> = _state.asStateFlow()
 
     init {
-        settingsRepository.settings
-            .onEach { s -> _uiState.update { it.copy(settings = s) } }
+        settingsRepo.settings
+            .onEach { s -> _state.update { it.copy(settings = s) } }
             .launchIn(viewModelScope)
     }
 
-    fun onNewSenderInput(v: String)    = _uiState.update { it.copy(newSenderInput = v) }
-    fun onNewDebitKeyword(v: String)   = _uiState.update { it.copy(newDebitKeyword = v) }
-    fun onNewCreditKeyword(v: String)  = _uiState.update { it.copy(newCreditKeyword = v) }
+    fun onNewSenderInput(v: String)   = _state.update { it.copy(newSenderInput = v) }
+    fun onNewDebitKeyword(v: String)  = _state.update { it.copy(newDebitKeyword = v) }
+    fun onNewCreditKeyword(v: String) = _state.update { it.copy(newCreditKeyword = v) }
 
     fun addSender() {
-        val v = _uiState.value.newSenderInput.trim()
-        if (v.isBlank()) return
-        save(_uiState.value.settings.copy(trustedSenders = _uiState.value.settings.trustedSenders + v))
-        _uiState.update { it.copy(newSenderInput = "") }
+        val v = _state.value.newSenderInput.trim().ifBlank { return }
+        save(_state.value.settings.copy(trustedSenders = _state.value.settings.trustedSenders + v))
+        _state.update { it.copy(newSenderInput = "") }
     }
-
-    fun removeSender(s: String) =
-        save(_uiState.value.settings.copy(trustedSenders = _uiState.value.settings.trustedSenders - s))
+    fun removeSender(s: String) = save(_state.value.settings.copy(trustedSenders = _state.value.settings.trustedSenders - s))
 
     fun addDebitKeyword() {
-        val v = _uiState.value.newDebitKeyword.trim().lowercase()
-        if (v.isBlank()) return
-        save(_uiState.value.settings.copy(debitKeywords = _uiState.value.settings.debitKeywords + v))
-        _uiState.update { it.copy(newDebitKeyword = "") }
+        val v = _state.value.newDebitKeyword.trim().lowercase().ifBlank { return }
+        save(_state.value.settings.copy(debitKeywords = _state.value.settings.debitKeywords + v))
+        _state.update { it.copy(newDebitKeyword = "") }
     }
-
-    fun removeDebitKeyword(k: String) =
-        save(_uiState.value.settings.copy(debitKeywords = _uiState.value.settings.debitKeywords - k))
+    fun removeDebitKeyword(k: String) = save(_state.value.settings.copy(debitKeywords = _state.value.settings.debitKeywords - k))
 
     fun addCreditKeyword() {
-        val v = _uiState.value.newCreditKeyword.trim().lowercase()
-        if (v.isBlank()) return
-        save(_uiState.value.settings.copy(creditKeywords = _uiState.value.settings.creditKeywords + v))
-        _uiState.update { it.copy(newCreditKeyword = "") }
+        val v = _state.value.newCreditKeyword.trim().lowercase().ifBlank { return }
+        save(_state.value.settings.copy(creditKeywords = _state.value.settings.creditKeywords + v))
+        _state.update { it.copy(newCreditKeyword = "") }
     }
+    fun removeCreditKeyword(k: String) = save(_state.value.settings.copy(creditKeywords = _state.value.settings.creditKeywords - k))
 
-    fun removeCreditKeyword(k: String) =
-        save(_uiState.value.settings.copy(creditKeywords = _uiState.value.settings.creditKeywords - k))
+    fun setCurrency(c: String)       = save(_state.value.settings.copy(currencySymbol = c.uppercase()))
+    fun toggleAutoScan(on: Boolean)  = save(_state.value.settings.copy(autoScanEnabled = on))
+    fun setMonthStartDay(d: Int)     = save(_state.value.settings.copy(monthStartDay = d.coerceIn(1, 28)))
+    fun toggleDarkTheme(on: Boolean) = save(_state.value.settings.copy(darkTheme = on))
+    fun toggleAmoled(on: Boolean)    = save(_state.value.settings.copy(amoledTheme = on))
+    fun toggleHideBalances(on: Boolean) = save(_state.value.settings.copy(hideBalances = on))
 
-    fun setCurrency(c: String)          = save(_uiState.value.settings.copy(currencySymbol = c.uppercase()))
-    fun toggleAutoScan(on: Boolean)     = save(_uiState.value.settings.copy(autoScanEnabled = on))
-    fun setMonthStartDay(day: Int)      = save(_uiState.value.settings.copy(monthStartDay = day.coerceIn(1, 28)))
-
-    private fun save(s: AppSettings) { viewModelScope.launch { settingsRepository.saveSettings(s) } }
+    private fun save(s: AppSettings) { viewModelScope.launch { settingsRepo.saveSettings(s) } }
 
     fun scanInbox() {
-        if (_uiState.value.scanProgress.isScanning) return
-        _uiState.update { it.copy(scanProgress = ScanProgress(isScanning = true)) }
+        if (_state.value.scanProgress.isScanning) return
+        _state.update { it.copy(scanProgress = ScanProgress(isScanning = true)) }
         viewModelScope.launch {
             try {
-                val settings = _uiState.value.settings
+                val s = _state.value.settings
                 val config = SmsParser.ParserConfig(
-                    currencySymbol = settings.currencySymbol,
-                    trustedSenders = settings.trustedSenders,
-                    debitKeywords  = settings.debitKeywords,
-                    creditKeywords = settings.creditKeywords
+                    currencySymbol = s.currencySymbol,
+                    trustedSenders = s.trustedSenders,
+                    debitKeywords  = s.debitKeywords,
+                    creditKeywords = s.creditKeywords
                 )
-                val rawList = smsInboxScanner.scanInbox(settings) { scanned, total ->
-                    _uiState.update { it.copy(scanProgress = it.scanProgress.copy(scanned = scanned, total = total)) }
+                val rawList = scanner.scanInbox(s) { scanned, total ->
+                    _state.update { it.copy(scanProgress = it.scanProgress.copy(scanned = scanned, total = total)) }
                 }
                 var imported = 0
                 rawList.forEach { raw ->
                     val parsed = SmsParser.parse(raw.body, raw.sender, raw.timestamp, config)
-                    if (parsed != null && transactionRepository.insertFromSms(parsed) != null) imported++
+                    if (parsed != null && txRepo.insertFromSms(parsed) != null) imported++
                 }
-                _uiState.update {
-                    it.copy(scanProgress = ScanProgress(done = true, imported = imported,
-                        scanned = rawList.size, total = rawList.size))
-                }
+                _state.update { it.copy(scanProgress = ScanProgress(done = true, imported = imported, scanned = rawList.size, total = rawList.size)) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(scanProgress = ScanProgress(done = true, error = e.message)) }
+                _state.update { it.copy(scanProgress = ScanProgress(done = true, error = e.message)) }
             }
         }
     }
 
-    fun dismissScanResult() = _uiState.update { it.copy(scanProgress = ScanProgress()) }
+    fun dismissScanResult() = _state.update { it.copy(scanProgress = ScanProgress()) }
 }

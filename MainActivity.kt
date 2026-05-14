@@ -11,43 +11,50 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
+import com.expensetracker.data.repository.SettingsRepository
 import com.expensetracker.presentation.SmsPermissionScreen
 import com.expensetracker.presentation.budget.BudgetScreen
 import com.expensetracker.presentation.dashboard.DashboardScreen
+import com.expensetracker.presentation.settings.MerchantRulesScreen
 import com.expensetracker.presentation.settings.SettingsScreen
 import com.expensetracker.presentation.transactions.TransactionsScreen
 import com.expensetracker.presentation.ui.theme.ExpenseTrackerTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
     object Dashboard    : Screen("dashboard",    "Home",         Icons.Default.Home)
     object Transactions : Screen("transactions", "Transactions", Icons.Default.List)
     object Budget       : Screen("budget",       "Budget",       Icons.Default.AccountBalance)
     object Settings     : Screen("settings",     "Settings",     Icons.Default.Settings)
+    object Rules        : Screen("rules",        "Rules",        Icons.Default.Rule)
 }
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject lateinit var settingsRepository: SettingsRepository
+
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            var isDarkTheme by remember { mutableStateOf(true) }
-            ExpenseTrackerTheme(darkTheme = isDarkTheme) {
-                val smsPermissions = rememberMultiplePermissionsState(
+            val settings by settingsRepository.settings.collectAsState(initial = com.expensetracker.domain.model.AppSettings())
+
+            ExpenseTrackerTheme(darkTheme = settings.darkTheme, amoledTheme = settings.amoledTheme) {
+                val smsPerms = rememberMultiplePermissionsState(
                     listOf(Manifest.permission.READ_SMS, Manifest.permission.RECEIVE_SMS)
                 )
-                if (!smsPermissions.allPermissionsGranted) {
-                    SmsPermissionScreen(
-                        onGrantPermission = { smsPermissions.launchMultiplePermissionRequest() }
-                    )
+                if (!smsPerms.allPermissionsGranted) {
+                    SmsPermissionScreen(onGrantPermission = { smsPerms.launchMultiplePermissionRequest() })
                 } else {
-                    MainApp(isDarkTheme = isDarkTheme, onToggleTheme = { isDarkTheme = !isDarkTheme })
+                    MainApp()
                 }
             }
         }
@@ -56,33 +63,20 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainApp(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
+fun MainApp() {
     val navController = rememberNavController()
-    val screens = listOf(Screen.Dashboard, Screen.Transactions, Screen.Budget, Screen.Settings)
+    val bottomScreens = listOf(Screen.Dashboard, Screen.Transactions, Screen.Budget, Screen.Settings)
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("ExpenseTracker") },
-                actions = {
-                    IconButton(onClick = onToggleTheme) {
-                        Icon(
-                            if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                            contentDescription = "Toggle theme"
-                        )
-                    }
-                }
-            )
-        },
         bottomBar = {
             NavigationBar {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDest = navBackStackEntry?.destination
-                screens.forEach { screen ->
+                val entry by navController.currentBackStackEntryAsState()
+                val current = entry?.destination
+                bottomScreens.forEach { screen ->
                     NavigationBarItem(
-                        icon = { Icon(screen.icon, contentDescription = screen.label) },
+                        icon = { Icon(screen.icon, screen.label) },
                         label = { Text(screen.label) },
-                        selected = currentDest?.hierarchy?.any { it.route == screen.route } == true,
+                        selected = current?.hierarchy?.any { it.route == screen.route } == true,
                         onClick = {
                             navController.navigate(screen.route) {
                                 popUpTo(navController.graph.findStartDestination().id) { saveState = true }
@@ -95,11 +89,7 @@ fun MainApp(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
             }
         }
     ) { padding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Dashboard.route,
-            modifier = Modifier.padding(padding)
-        ) {
+        NavHost(navController, startDestination = Screen.Dashboard.route, Modifier.padding(padding)) {
             composable(Screen.Dashboard.route) {
                 DashboardScreen(
                     onNavigateToTransactions = { navController.navigate(Screen.Transactions.route) },
@@ -108,7 +98,10 @@ fun MainApp(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
             }
             composable(Screen.Transactions.route) { TransactionsScreen() }
             composable(Screen.Budget.route) { BudgetScreen() }
-            composable(Screen.Settings.route) { SettingsScreen() }
+            composable(Screen.Settings.route) {
+                SettingsScreen(onNavigateToRules = { navController.navigate(Screen.Rules.route) })
+            }
+            composable(Screen.Rules.route) { MerchantRulesScreen() }
         }
     }
 }

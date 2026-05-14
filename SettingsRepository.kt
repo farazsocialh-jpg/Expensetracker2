@@ -25,30 +25,45 @@ class SettingsRepository @Inject constructor(
         val CREDIT_KEYWORDS = stringPreferencesKey("credit_keywords")
         val AUTO_SCAN       = booleanPreferencesKey("auto_scan")
         val MONTH_START_DAY = intPreferencesKey("month_start_day")
+        val DARK_THEME      = booleanPreferencesKey("dark_theme")
+        val AMOLED_THEME    = booleanPreferencesKey("amoled_theme")
+        val HIDE_BALANCES   = booleanPreferencesKey("hide_balances")
+        val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
+        val COUNTRY         = stringPreferencesKey("country")
     }
 
-    val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
+    val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
         AppSettings(
-            currencySymbol  = prefs[Keys.CURRENCY] ?: "QAR",
-            trustedSenders  = prefs[Keys.TRUSTED_SENDERS]?.split("|")?.filter { it.isNotBlank() }
-                ?: listOf("QNB", "DOHA BANK", "CBQ", "MASRAF", "HSBC", "QIIB", "DUKHAN", "AHLIBANK"),
-            debitKeywords   = prefs[Keys.DEBIT_KEYWORDS]?.split("|")?.filter { it.isNotBlank() }
-                ?: listOf("debited", "payment", "purchase", "withdrawn", "charged"),
-            creditKeywords  = prefs[Keys.CREDIT_KEYWORDS]?.split("|")?.filter { it.isNotBlank() }
-                ?: listOf("credited", "received", "refund"),
-            autoScanEnabled = prefs[Keys.AUTO_SCAN] ?: true,
-            monthStartDay   = prefs[Keys.MONTH_START_DAY] ?: 1
+            currencySymbol  = p[Keys.CURRENCY] ?: "QAR",
+            trustedSenders  = p[Keys.TRUSTED_SENDERS]?.split("|")?.filter { it.isNotBlank() }
+                ?: listOf("QNB","DOHA BANK","CBQ","MASRAF","HSBC","QIIB","DUKHAN","AHLIBANK","OOREDOO","VODAFONE","COMMERCIAL BANK"),
+            debitKeywords   = p[Keys.DEBIT_KEYWORDS]?.split("|")?.filter { it.isNotBlank() }
+                ?: listOf("debited","payment","purchase","withdrawn","charged","paid","debit"),
+            creditKeywords  = p[Keys.CREDIT_KEYWORDS]?.split("|")?.filter { it.isNotBlank() }
+                ?: listOf("credited","received","refund","salary"),
+            autoScanEnabled = p[Keys.AUTO_SCAN] ?: true,
+            monthStartDay   = p[Keys.MONTH_START_DAY] ?: 1,
+            darkTheme       = p[Keys.DARK_THEME] ?: true,
+            amoledTheme     = p[Keys.AMOLED_THEME] ?: false,
+            hideBalances    = p[Keys.HIDE_BALANCES] ?: false,
+            onboardingDone  = p[Keys.ONBOARDING_DONE] ?: false,
+            country         = p[Keys.COUNTRY] ?: "QA"
         )
     }
 
-    suspend fun saveSettings(settings: AppSettings) {
-        context.dataStore.edit { prefs ->
-            prefs[Keys.CURRENCY]        = settings.currencySymbol
-            prefs[Keys.TRUSTED_SENDERS] = settings.trustedSenders.joinToString("|")
-            prefs[Keys.DEBIT_KEYWORDS]  = settings.debitKeywords.joinToString("|")
-            prefs[Keys.CREDIT_KEYWORDS] = settings.creditKeywords.joinToString("|")
-            prefs[Keys.AUTO_SCAN]       = settings.autoScanEnabled
-            prefs[Keys.MONTH_START_DAY] = settings.monthStartDay
+    suspend fun saveSettings(s: AppSettings) {
+        context.dataStore.edit { p ->
+            p[Keys.CURRENCY]        = s.currencySymbol
+            p[Keys.TRUSTED_SENDERS] = s.trustedSenders.joinToString("|")
+            p[Keys.DEBIT_KEYWORDS]  = s.debitKeywords.joinToString("|")
+            p[Keys.CREDIT_KEYWORDS] = s.creditKeywords.joinToString("|")
+            p[Keys.AUTO_SCAN]       = s.autoScanEnabled
+            p[Keys.MONTH_START_DAY] = s.monthStartDay
+            p[Keys.DARK_THEME]      = s.darkTheme
+            p[Keys.AMOLED_THEME]    = s.amoledTheme
+            p[Keys.HIDE_BALANCES]   = s.hideBalances
+            p[Keys.ONBOARDING_DONE] = s.onboardingDone
+            p[Keys.COUNTRY]         = s.country
         }
     }
 

@@ -13,78 +13,159 @@ import javax.inject.Singleton
 
 @Singleton
 class TransactionRepository @Inject constructor(
-    private val transactionDao: TransactionDao,
-    private val budgetDao: BudgetDao
+    private val txDao: TransactionDao,
+    private val budgetDao: BudgetDao,
+    private val ruleDao: MerchantRuleDao
 ) {
     private val fmt = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+    private fun now() = LocalDateTime.now().format(fmt)
 
-    fun getAllTransactions(): Flow<List<Transaction>> =
-        transactionDao.getAllTransactions().map { it.map { e -> e.toDomain() } }
+    // ─── Transactions ────────────────────────────────────────────────────────
 
-    fun getRecentTransactions(limit: Int = 10): Flow<List<Transaction>> =
-        transactionDao.getRecentTransactions(limit).map { it.map { e -> e.toDomain() } }
+    fun getAll(): Flow<List<Transaction>> = txDao.getAllTransactions().map { it.map { e -> e.toDomain() } }
 
-    fun getTransactionsByDateRange(start: LocalDateTime, end: LocalDateTime): Flow<List<Transaction>> =
-        transactionDao.getTransactionsByDateRange(start.format(fmt), end.format(fmt))
-            .map { it.map { e -> e.toDomain() } }
+    fun getRecent(limit: Int = 8): Flow<List<Transaction>> = txDao.getRecent(limit).map { it.map { e -> e.toDomain() } }
 
-    fun searchTransactions(query: String): Flow<List<Transaction>> =
-        transactionDao.searchTransactions(query).map { it.map { e -> e.toDomain() } }
+    fun getByDateRange(start: LocalDateTime, end: LocalDateTime): Flow<List<Transaction>> =
+        txDao.getByDateRange(start.format(fmt), end.format(fmt)).map { it.map { e -> e.toDomain() } }
 
-    fun getTransactionsByCategory(category: ExpenseCategory): Flow<List<Transaction>> =
-        transactionDao.getTransactionsByCategory(category.name).map { it.map { e -> e.toDomain() } }
+    fun search(q: String): Flow<List<Transaction>> = txDao.search(q).map { it.map { e -> e.toDomain() } }
 
-    fun getTransactionsByCard(card: String): Flow<List<Transaction>> =
-        transactionDao.getTransactionsByCard(card).map { it.map { e -> e.toDomain() } }
+    fun getByCategory(cat: ExpenseCategory): Flow<List<Transaction>> =
+        txDao.getByCategory(cat.name).map { it.map { e -> e.toDomain() } }
 
-    fun getDistinctCards(): Flow<List<String>> = transactionDao.getDistinctCards()
+    fun getByCard(card: String): Flow<List<Transaction>> =
+        txDao.getByCard(card).map { it.map { e -> e.toDomain() } }
 
-    suspend fun getDashboardStats(now: LocalDate = LocalDate.now()): DashboardStats {
-        val dayStart  = now.atStartOfDay()
-        val weekStart = now.minusDays(now.dayOfWeek.value.toLong() - 1).atStartOfDay()
-        val monthStart = now.withDayOfMonth(1).atStartOfDay()
-        val end = now.plusDays(1).atStartOfDay()
+    fun getRecurring(): Flow<List<Transaction>> =
+        txDao.getRecurring().map { it.map { e -> e.toDomain() } }
 
-        val daily   = transactionDao.getTotalForPeriod(dayStart.format(fmt), end.format(fmt)) ?: 0.0
-        val weekly  = transactionDao.getTotalForPeriod(weekStart.format(fmt), end.format(fmt)) ?: 0.0
-        val monthly = transactionDao.getTotalForPeriod(monthStart.format(fmt), end.format(fmt)) ?: 0.0
+    fun getDistinctCards(): Flow<List<String>> = txDao.getDistinctCards()
+
+    // ─── Dashboard stats ─────────────────────────────────────────────────────
+
+    suspend fun getDashboardStats(
+        now: LocalDate = LocalDate.now(),
+        monthStartDay: Int = 1
+    ): DashboardStats {
+        val startDay = monthStartDay.coerceIn(1, 28)
+        val today = now
+        val dayStart   = today.atStartOfDay()
+        val weekStart  = today.minusDays(today.dayOfWeek.value.toLong() - 1).atStartOfDay()
+        val monthStart = if (today.dayOfMonth >= startDay)
+            today.withDayOfMonth(startDay).atStartOfDay()
+        else today.minusMonths(1).withDayOfMonth(startDay).atStartOfDay()
+        val end = today.plusDays(1).atStartOfDay()
+
+        val daily   = txDao.sumForPeriod(dayStart.format(fmt), end.format(fmt)) ?: 0.0
+        val weekly  = txDao.sumForPeriod(weekStart.format(fmt), end.format(fmt)) ?: 0.0
+        val monthly = txDao.sumForPeriod(monthStart.format(fmt), end.format(fmt)) ?: 0.0
+
+        val monthBudgets = budgetDao.getForMonth(today.monthValue, today.year)
+        val totalBudget  = 0.0  // computed from flow elsewhere
 
         val summaries = ExpenseCategory.values().mapNotNull { cat ->
-            val total = transactionDao.getTotalForCategoryAndPeriod(cat.name, monthStart.format(fmt), end.format(fmt)) ?: 0.0
-            val count = transactionDao.getCountForCategoryAndPeriod(cat.name, monthStart.format(fmt), end.format(fmt))
+            val total = txDao.sumForCategoryPeriod(cat.name, monthStart.format(fmt), end.format(fmt)) ?: 0.0
+            val count = txDao.countForCategoryPeriod(cat.name, monthStart.format(fmt), end.format(fmt))
             if (total <= 0.0 && count == 0) null
             else {
-                val budget = budgetDao.getBudgetForCategory(cat.name, now.monthValue, now.year)
-                CategorySummary(cat, total, count, budget?.monthlyLimit)
+                val budget = budgetDao.getForCategory(cat.name, today.monthValue, today.year)
+                val pct    = if (monthly > 0) (total / monthly * 100).toFloat() else 0f
+                CategorySummary(cat, total, count, budget?.monthlyLimit, pct)
             }
         }.sortedByDescending { it.totalAmount }
 
-        return DashboardStats(daily, weekly, monthly, summaries, emptyList())
+        val topMerchants = txDao.getTopMerchants(monthStart.format(fmt), end.format(fmt), 5)
+            .map { row ->
+                MerchantSummary(
+                    name = row.merchant,
+                    totalAmount = row.total,
+                    count = row.cnt,
+                    category = try { ExpenseCategory.valueOf(row.category) } catch (_: Exception) { ExpenseCategory.OTHER }
+                )
+            }
+
+        val daysInPeriod = java.time.temporal.ChronoUnit.DAYS.between(monthStart, end.toLocalDate()).coerceAtLeast(1)
+        val dailyAvg = monthly / daysInPeriod
+        val daysInMonth = 30L
+        val projected = dailyAvg * daysInMonth
+
+        val alerts = buildAlerts(summaries, monthly, projected)
+
+        return DashboardStats(
+            dailyTotal = daily, weeklyTotal = weekly, monthlyTotal = monthly,
+            monthlyBudget = totalBudget, categorySummaries = summaries,
+            recentTransactions = emptyList(), topMerchants = topMerchants,
+            recurringTotal = 0.0, savingsRate = 0.0,
+            dailyAverage = dailyAvg, projectedMonthly = projected, alerts = alerts
+        )
     }
 
-    suspend fun insertTransaction(transaction: Transaction): Long =
-        transactionDao.insertTransaction(transaction.toEntity())
+    private fun buildAlerts(summaries: List<CategorySummary>, total: Double, projected: Double): List<SpendingAlert> {
+        val alerts = mutableListOf<SpendingAlert>()
+        summaries.forEach { s ->
+            val limit = s.budgetLimit ?: return@forEach
+            when {
+                s.totalAmount >= limit ->
+                    alerts.add(SpendingAlert(AlertType.BUDGET_EXCEEDED,
+                        "${s.category.emoji} ${s.category.displayName} budget exceeded!", s.totalAmount, s.category))
+                s.totalAmount >= limit * 0.8 ->
+                    alerts.add(SpendingAlert(AlertType.BUDGET_WARNING,
+                        "${s.category.emoji} ${s.category.displayName} at ${((s.totalAmount/limit)*100).toInt()}% of budget", s.totalAmount, s.category))
+            }
+        }
+        return alerts
+    }
+
+    // ─── CRUD ────────────────────────────────────────────────────────────────
+
+    suspend fun insert(t: Transaction): Long = txDao.insert(t.toEntity())
 
     suspend fun insertFromSms(parsed: SmsParser.ParsedTransaction): Long? {
-        if (transactionDao.findBySmsHash(parsed.smsHash) != null) return null
-        return transactionDao.insertTransaction(parsed.toEntity())
+        if (txDao.findBySmsHash(parsed.smsHash) != null) return null
+        // Apply merchant rules
+        val rule = ruleDao.findMatchingRule(normalizeMerchant(parsed.merchant))
+        val entity = parsed.toEntity()
+        val finalEntity = if (rule != null && rule.applyToFuture)
+            entity.copy(category = rule.category.name) else entity
+        return txDao.insert(finalEntity)
     }
 
-    suspend fun updateTransaction(transaction: Transaction) =
-        transactionDao.updateTransaction(transaction.toEntity())
+    suspend fun update(t: Transaction) = txDao.update(t.toEntity())
+    suspend fun delete(id: Long)        = txDao.deleteById(id)
 
-    suspend fun deleteTransaction(id: Long) = transactionDao.deleteById(id)
+    suspend fun updateAccountLabel(card: String, label: String) =
+        txDao.updateAccountLabel(card, label)
 
-    suspend fun updateAccountLabel(cardNumber: String, label: String) {
-        // We load all matching entities and update their label
-        // Room doesn't expose a bulk update by field easily without a custom query
-        // so we add a DAO query for this
-        transactionDao.updateAccountLabel(cardNumber, label)
+    // ─── Merchant rules ───────────────────────────────────────────────────────
+
+    suspend fun applyMerchantRule(
+        merchantNormalized: String,
+        category: ExpenseCategory,
+        displayName: String,
+        applyToPast: Boolean
+    ) {
+        val rule = MerchantRuleEntity(
+            pattern = merchantNormalized, displayName = displayName,
+            category = category.name, applyToFuture = true, applyToPast = applyToPast,
+            confidenceScore = 1f, createdAt = LocalDateTime.now().format(fmt)
+        )
+        ruleDao.insert(rule)
+        if (applyToPast) {
+            txDao.bulkUpdateCategory(merchantNormalized, category.name, LocalDateTime.now().format(fmt))
+        }
     }
+
+    fun getMerchantRules(): Flow<List<MerchantRule>> =
+        ruleDao.getAll().map { it.map { e -> e.toDomain() } }
+
+    suspend fun deleteMerchantRule(rule: MerchantRule) = ruleDao.delete(rule.toEntity())
+
+    // ─── Budgets ─────────────────────────────────────────────────────────────
 
     fun getBudgetsForMonth(month: Int, year: Int): Flow<List<Budget>> =
-        budgetDao.getBudgetsForMonth(month, year).map { it.map { e -> e.toDomain() } }
+        budgetDao.getForMonth(month, year).map { it.map { e -> e.toDomain() } }
 
-    suspend fun saveBudget(budget: Budget): Long = budgetDao.insertBudget(budget.toEntity())
-    suspend fun deleteBudget(budget: Budget) = budgetDao.deleteBudget(budget.toEntity())
+    suspend fun saveBudget(b: Budget): Long = budgetDao.insert(b.toEntity())
+    suspend fun deleteBudget(b: Budget)     = budgetDao.delete(b.toEntity())
 }
