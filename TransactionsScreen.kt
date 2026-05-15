@@ -144,9 +144,11 @@ fun TransactionsScreen(viewModel: TransactionViewModel = hiltViewModel()) {
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(DateRangePreset.values()) { preset ->
-                    val customLabel = if (preset == DateRangePreset.CUSTOM && state.filter.datePreset == DateRangePreset.CUSTOM && state.filter.startDate != null) {
+                    val filterStartDate = state.filter.startDate
+                    val filterEndDate = state.filter.endDate
+                    val customLabel = if (preset == DateRangePreset.CUSTOM && state.filter.datePreset == DateRangePreset.CUSTOM && filterStartDate != null) {
                         val fmt = DateTimeFormatter.ofPattern("MMM d")
-                        "${state.filter.startDate.format(fmt)} – ${state.filter.endDate?.format(fmt) ?: "?"}"
+                        "${filterStartDate.format(fmt)} – ${filterEndDate?.format(fmt) ?: "?"}"
                     } else preset.label()
                     FilterChip(
                         selected = state.filter.datePreset == preset,

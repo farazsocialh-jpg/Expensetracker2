@@ -33,7 +33,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object Transactions : Screen("transactions", "Transactions", Icons.Default.List)
     object Budget       : Screen("budget",       "Budget",       Icons.Default.AccountBalance)
     object Settings     : Screen("settings",     "Settings",     Icons.Default.Settings)
-    object Rules        : Screen("rules",        "Rules",        Icons.Default.Rule)
+    object Rules        : Screen("rules",        "Rules",        Icons.Default.AutoFixHigh)
 }
 
 @AndroidEntryPoint

@@ -1,5 +1,6 @@
 package com.expensetracker.presentation.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -79,7 +80,7 @@ fun SettingsScreen(onNavigateToRules: () -> Unit = {}, viewModel: SettingsViewMo
             item {
                 Card(shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    onClick = onNavigateToRules) {
+                    modifier = Modifier.clickable { onNavigateToRules() }) {
                     Row(Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text("🏪", fontSize = 22.sp)
                         Spacer(Modifier.width(12.dp))
@@ -88,7 +89,7 @@ fun SettingsScreen(onNavigateToRules: () -> Unit = {}, viewModel: SettingsViewMo
                             Text("Auto-categorization rules", style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Default.ArrowForwardIos, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }

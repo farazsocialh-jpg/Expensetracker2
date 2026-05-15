@@ -415,5 +415,3 @@ fun EmptyState(emoji: String, title: String, subtitle: String) {
     }
 }
 
-// Keep CategoryColors for compatibility
-val CategoryColors = ExpenseCategory.values().associate { it.name to Color(it.color) }

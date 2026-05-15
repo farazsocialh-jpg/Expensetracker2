@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.expensetracker.domain.model.MerchantRule
-import com.expensetracker.presentation.settings.MerchantRulesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -48,7 +48,7 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE isExcluded = 0 AND isRecurring = 1 ORDER BY dateTime DESC")
     fun getRecurring(): Flow<List<TransactionEntity>>
 
-    @Query("SELECT normalizedMerchant, merchant, category, SUM(amount) as total, COUNT(*) as cnt FROM transactions WHERE isExcluded = 0 AND transactionType = 'DEBIT' AND dateTime >= :start AND dateTime <= :end GROUP BY normalizedMerchant ORDER BY total DESC LIMIT :limit")
+    @Query("SELECT normalizedMerchant, MIN(merchant) as merchant, MIN(category) as category, SUM(amount) as total, COUNT(*) as cnt FROM transactions WHERE isExcluded = 0 AND transactionType = 'DEBIT' AND dateTime >= :start AND dateTime <= :end GROUP BY normalizedMerchant ORDER BY total DESC LIMIT :limit")
     suspend fun getTopMerchants(start: String, end: String, limit: Int = 10): List<MerchantAggRow>
 
     @Query("UPDATE transactions SET accountLabel = :label WHERE accountLast4 = :card")
@@ -74,11 +74,11 @@ interface TransactionDao {
 }
 
 data class MerchantAggRow(
-    val normalizedMerchant: String,
-    val merchant: String,
-    val category: String,
-    val total: Double,
-    val cnt: Int
+    @androidx.room.ColumnInfo(name = "normalizedMerchant") val normalizedMerchant: String,
+    @androidx.room.ColumnInfo(name = "merchant") val merchant: String,
+    @androidx.room.ColumnInfo(name = "category") val category: String,
+    @androidx.room.ColumnInfo(name = "total") val total: Double,
+    @androidx.room.ColumnInfo(name = "cnt") val cnt: Int
 )
 
 @Dao

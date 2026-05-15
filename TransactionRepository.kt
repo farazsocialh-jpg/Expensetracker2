@@ -61,8 +61,7 @@ class TransactionRepository @Inject constructor(
         val weekly  = txDao.sumForPeriod(weekStart.format(fmt), end.format(fmt)) ?: 0.0
         val monthly = txDao.sumForPeriod(monthStart.format(fmt), end.format(fmt)) ?: 0.0
 
-        val monthBudgets = budgetDao.getForMonth(today.monthValue, today.year)
-        val totalBudget  = 0.0  // computed from flow elsewhere
+        val totalBudget  = 0.0
 
         val summaries = ExpenseCategory.values().mapNotNull { cat ->
             val total = txDao.sumForCategoryPeriod(cat.name, monthStart.format(fmt), end.format(fmt)) ?: 0.0
@@ -123,11 +122,11 @@ class TransactionRepository @Inject constructor(
 
     suspend fun insertFromSms(parsed: SmsParser.ParsedTransaction): Long? {
         if (txDao.findBySmsHash(parsed.smsHash) != null) return null
-        // Apply merchant rules
-        val rule = ruleDao.findMatchingRule(normalizeMerchant(parsed.merchant))
         val entity = parsed.toEntity()
-        val finalEntity = if (rule != null && rule.applyToFuture)
-            entity.copy(category = rule.category.name) else entity
+        // Apply merchant rules
+        val matchedRule = ruleDao.findMatchingRule(normalizeMerchant(parsed.merchant))
+        val categoryOverride: String? = if (matchedRule != null && matchedRule.applyToFuture) matchedRule.category else null
+        val finalEntity = if (categoryOverride != null) entity.copy(category = categoryOverride) else entity
         return txDao.insert(finalEntity)
     }
 

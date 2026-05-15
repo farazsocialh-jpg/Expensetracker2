@@ -11,7 +11,6 @@ workflows:
           mkdir -p gradle/wrapper
           cp gradle-wrapper.properties gradle/wrapper/gradle-wrapper.properties
           cp libs.versions.toml gradle/libs.versions.toml
-
           mkdir -p app/src/main/java/com/expensetracker/data/db
           mkdir -p app/src/main/java/com/expensetracker/data/repository
           mkdir -p app/src/main/java/com/expensetracker/domain/model
@@ -22,14 +21,11 @@ workflows:
           mkdir -p app/src/main/java/com/expensetracker/presentation/ui/theme
           mkdir -p app/src/main/java/com/expensetracker/service
           mkdir -p app/src/main/java/com/expensetracker/utils
-          mkdir -p app/src/main/res/values
-          mkdir -p app/src/main/res/xml
+          mkdir -p app/src/main/res/values app/src/main/res/xml
           mkdir -p app/src/main/res/mipmap-mdpi app/src/main/res/mipmap-hdpi
           mkdir -p app/src/main/res/mipmap-xhdpi app/src/main/res/mipmap-xxhdpi
           mkdir -p app/src/main/res/mipmap-xxxhdpi
-
           SRC=app/src/main/java/com/expensetracker
-
           cp app.build.gradle.kts     app/build.gradle.kts
           cp MainActivity.kt          $SRC/MainActivity.kt
           cp AppModule.kt             $SRC/AppModule.kt
@@ -62,22 +58,23 @@ workflows:
           cp themes.xml               app/src/main/res/values/themes.xml
           cp file_paths.xml           app/src/main/res/xml/file_paths.xml
           cp network_security_config.xml app/src/main/res/xml/network_security_config.xml
-
           for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
             cp mipmap-${d}/ic_launcher.png       app/src/main/res/mipmap-${d}/ic_launcher.png
             cp mipmap-${d}/ic_launcher_round.png app/src/main/res/mipmap-${d}/ic_launcher_round.png
           done
-          echo "✅ Done"
+          echo "✅ Structure OK"
 
       - name: Download Gradle wrapper jar
         script: |
           curl -sL "https://github.com/gradle/gradle/raw/v8.7.0/gradle/wrapper/gradle-wrapper.jar" \
             -o gradle/wrapper/gradle-wrapper.jar
 
-      - name: Setup & build
+      - name: Build
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
           chmod +x gradlew
+          ./gradlew assembleDebug --info 2>&1 | grep -E "^e: |error:|w: " | head -100
+          echo "---FULL BUILD---"
           ./gradlew assembleDebug --stacktrace 2>&1
 
     artifacts:
