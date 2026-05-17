@@ -12,11 +12,12 @@ import java.time.LocalDate
 import javax.inject.Inject
 
 data class DashboardUiState(
-    val stats: DashboardStats? = null,
+    val stats: DashboardStats = DashboardStats(),
     val recentTransactions: List<Transaction> = emptyList(),
     val hideBalances: Boolean = false,
     val isLoading: Boolean = true,
-    val monthStartDay: Int = 1
+    val monthStartDay: Int = 1,
+    val currency: String = "QAR"
 )
 
 @HiltViewModel
@@ -30,18 +31,16 @@ class DashboardViewModel @Inject constructor(
 
     init {
         settingsRepo.settings.onEach { s ->
-            _state.update { it.copy(hideBalances = s.hideBalances, monthStartDay = s.monthStartDay) }
+            _state.update { it.copy(hideBalances = s.hideBalances, monthStartDay = s.monthStartDay, currency = s.currencySymbol) }
             loadStats(s.monthStartDay)
         }.launchIn(viewModelScope)
 
-        repo.getRecent(8).onEach { txns ->
-            _state.update { it.copy(recentTransactions = txns) }
+        repo.getRecent(8).onEach { list ->
+            _state.update { it.copy(recentTransactions = list) }
         }.launchIn(viewModelScope)
     }
 
-    fun refresh() {
-        loadStats(_state.value.monthStartDay)
-    }
+    fun refresh() = loadStats(_state.value.monthStartDay)
 
     private fun loadStats(monthStartDay: Int) {
         viewModelScope.launch {
@@ -49,7 +48,7 @@ class DashboardViewModel @Inject constructor(
             try {
                 val stats = repo.getDashboardStats(LocalDate.now(), monthStartDay)
                 _state.update { it.copy(stats = stats, isLoading = false) }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _state.update { it.copy(isLoading = false) }
             }
         }

@@ -28,7 +28,7 @@ import kotlin.math.min
 @Composable
 fun BudgetScreen(viewModel: BudgetViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsState()
-    val now = LocalDate.now()
+    val now    = LocalDate.now()
 
     Scaffold(
         topBar = {
@@ -43,16 +43,14 @@ fun BudgetScreen(viewModel: BudgetViewModel = hiltViewModel()) {
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { viewModel.showAddDialog() },
-                containerColor = MaterialTheme.colorScheme.primary) {
-                Icon(Icons.Default.Add, null)
-            }
+                containerColor = MaterialTheme.colorScheme.primary) { Icon(Icons.Default.Add, null) }
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
+        LazyColumn(Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+
+            // Overview card
             item {
                 val totalBudget = state.budgets.sumOf { it.monthlyLimit }
                 val totalSpent  = state.summaries.sumOf { it.totalAmount }
@@ -64,10 +62,12 @@ fun BudgetScreen(viewModel: BudgetViewModel = hiltViewModel()) {
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
                         Spacer(Modifier.height(4.dp))
                         Row(verticalAlignment = Alignment.Bottom) {
-                            Text(formatAmount(totalSpent), style = MaterialTheme.typography.headlineMedium,
+                            Text(formatAmount(totalSpent, state.currency),
+                                style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer)
-                            Text(" / ${formatAmount(totalBudget)}", style = MaterialTheme.typography.bodyLarge,
+                            Text(" / ${formatAmount(totalBudget, state.currency)}",
+                                style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f))
                         }
                         Spacer(Modifier.height(10.dp))
@@ -75,8 +75,7 @@ fun BudgetScreen(viewModel: BudgetViewModel = hiltViewModel()) {
                             progress = { progress },
                             modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
                             color = if (progress >= 1f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f)
-                        )
+                            trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f))
                         Spacer(Modifier.height(4.dp))
                         Text("${(progress * 100).toInt()}% used",
                             style = MaterialTheme.typography.labelSmall,
@@ -86,12 +85,12 @@ fun BudgetScreen(viewModel: BudgetViewModel = hiltViewModel()) {
             }
 
             items(ExpenseCategory.values().toList()) { cat ->
-                val budget  = state.budgets.find { it.category == cat }
-                val spent   = state.summaries.find { it.category == cat }?.totalAmount ?: 0.0
-                val limit   = budget?.monthlyLimit ?: 0.0
+                val budget   = state.budgets.find { it.category == cat }
+                val spent    = state.summaries.find { it.category == cat }?.totalAmount ?: 0.0
+                val limit    = budget?.monthlyLimit ?: 0.0
                 val progress = if (budget != null && limit > 0) min((spent / limit).toFloat(), 1f) else 0f
-                val isOver  = budget != null && spent > limit
-                val color   = Color(cat.color)
+                val isOver   = budget != null && spent > limit
+                val color    = Color(cat.color)
 
                 Card(shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(
@@ -101,30 +100,27 @@ fun BudgetScreen(viewModel: BudgetViewModel = hiltViewModel()) {
                         Text(cat.emoji, fontSize = 22.sp)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(cat.displayName, style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold)
+                            Text(cat.displayName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                             if (budget != null) {
                                 Spacer(Modifier.height(5.dp))
                                 LinearProgressIndicator(
                                     progress = { progress },
                                     modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)),
                                     color = if (isOver) MaterialTheme.colorScheme.error else color,
-                                    trackColor = color.copy(alpha = 0.2f)
-                                )
+                                    trackColor = color.copy(alpha = 0.2f))
                                 Spacer(Modifier.height(3.dp))
-                                Text("${formatAmount(spent)} / ${formatAmount(limit)}",
+                                Text("${formatAmount(spent, state.currency)} / ${formatAmount(limit, state.currency)}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = if (isOver) MaterialTheme.colorScheme.error
-                                            else MaterialTheme.colorScheme.onSurfaceVariant)
+                                    color = if (isOver) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
                             } else {
-                                Text(if (spent > 0) "${formatAmount(spent)} spent · no limit set" else "No budget set",
+                                Text(if (spent > 0) "${formatAmount(spent, state.currency)} spent · no limit" else "No budget set",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                         IconButton(onClick = { viewModel.showAddDialog(cat) }) {
-                            Icon(if (budget != null) Icons.Default.Edit else Icons.Default.Add,
-                                null, tint = MaterialTheme.colorScheme.primary)
+                            Icon(if (budget != null) Icons.Default.Edit else Icons.Default.Add, null,
+                                tint = MaterialTheme.colorScheme.primary)
                         }
                         if (budget != null) {
                             IconButton(onClick = { viewModel.deleteBudget(budget) }) {
@@ -138,29 +134,27 @@ fun BudgetScreen(viewModel: BudgetViewModel = hiltViewModel()) {
         }
 
         if (state.showDialog && state.editingBudget != null) {
-            BudgetDialog(state.editingBudget!!, { viewModel.hideDialog() }, { viewModel.saveBudget(it) })
+            BudgetDialog(state.editingBudget!!, state.currency,
+                onDismiss = { viewModel.hideDialog() },
+                onSave    = { viewModel.saveBudget(it) })
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BudgetDialog(budget: Budget, onDismiss: () -> Unit, onSave: (Budget) -> Unit) {
+fun BudgetDialog(budget: Budget, currency: String, onDismiss: () -> Unit, onSave: (Budget) -> Unit) {
     var amount by remember { mutableStateOf(if (budget.monthlyLimit > 0) budget.monthlyLimit.toString() else "") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
+    AlertDialog(onDismissRequest = onDismiss,
         title = { Text("${budget.category.emoji} ${budget.category.displayName}") },
-        text = {
+        text  = {
             OutlinedTextField(value = amount, onValueChange = { amount = it },
-                label = { Text("Monthly limit (QAR)") },
+                label = { Text("Monthly limit ($currency)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(), singleLine = true)
         },
         confirmButton = {
-            Button(onClick = {
-                val l = amount.toDoubleOrNull() ?: return@Button
-                onSave(budget.copy(monthlyLimit = l))
-            }) { Text("Save") }
+            Button(onClick = { val l = amount.toDoubleOrNull() ?: return@Button; onSave(budget.copy(monthlyLimit = l)) }) { Text("Save") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )

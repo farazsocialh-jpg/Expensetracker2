@@ -29,16 +29,14 @@ object SmsParser {
 
     private val DEFAULT_DEBIT = listOf(
         "debited","deducted","spent","paid","payment","purchase",
-        "withdrawn","charged","debit","pos ","txn","transaction","transferred","sent"
+        "withdrawn","charged","debit","pos ","txn","transaction","sent"
     )
     private val DEFAULT_CREDIT = listOf(
-        "credited","received","credit","deposited","added","refund","cashback","salary","neft received"
+        "credited","received","credit","deposited","refund","cashback","salary"
     )
-    private val OTP_WORDS = listOf(
-        "otp","one time","verification code","do not share","expires in","login code"
-    )
+    private val OTP_WORDS = listOf("otp","one time","verification code","do not share","expires in")
     private val REFUND_WORDS = listOf("refund","reversal","reversed","cashback")
-    private val TRANSFER_WORDS = listOf("transfer","neft","imps","rtgs","sent to","transferred to")
+    private val TRANSFER_WORDS = listOf("transfer","neft","imps","rtgs","sent to")
 
     private fun amountPatterns(currency: String) = listOf(
         Regex("""(?:${Regex.escape(currency)}|QAR|SAR|AED|KWD|BHD|OMR|Rs\.?|INR|USD|\$|EUR|GBP)\s*([0-9,]+(?:\.[0-9]{1,3})?)""", RegexOption.IGNORE_CASE),
@@ -48,7 +46,7 @@ object SmsParser {
     )
 
     private val BALANCE_PATTERNS = listOf(
-        Regex("""(?:avl|avail|available|bal|balance)\s*(?:bal|balance|amt)?\s*(?:is|:|-|=)?\s*(?:[A-Z]{2,4})?\s*([0-9,]+(?:\.[0-9]{1,3})?)""", RegexOption.IGNORE_CASE),
+        Regex("""(?:avl|avail|available|bal|balance)\s*(?:bal|balance)?\s*(?:is|:|-|=)?\s*(?:[A-Z]{2,4})?\s*([0-9,]+(?:\.[0-9]{1,3})?)""", RegexOption.IGNORE_CASE),
         Regex("""(?:[A-Z]{2,4})\s*([0-9,]+(?:\.[0-9]{1,3})?)\s*(?:available|avl|bal|balance)""", RegexOption.IGNORE_CASE)
     )
 
@@ -59,20 +57,22 @@ object SmsParser {
         Regex("""(?:towards|for)\s+([A-Za-z0-9 \-&'.]+?)(?:\s+on|\s+ref|\.|,|$)""", RegexOption.IGNORE_CASE)
     )
 
+    // MERCHANT-FIRST categorization — keywords matched against merchant name primarily
     val CATEGORY_KEYWORDS: Map<ExpenseCategory, List<String>> = mapOf(
         ExpenseCategory.FOOD to listOf(
-            "restaurant","cafe","coffee","pizza","burger","kfc","mcdonalds","subway","food",
-            "dining","eatery","biryani","shawarma","zomato","talabat","starbucks","tim hortons",
-            "hardees","popeyes","wendys","dominos","papa johns","careem food","noon food",
-            "shake shack","five guys","texas roadhouse","applebees","chilis"
+            "talabat","zomato","careem food","noon food","restaurant","cafe","coffee",
+            "pizza","burger","kfc","mcdonalds","subway","dining","eatery","biryani",
+            "shawarma","starbucks","tim hortons","hardees","popeyes","wendys","dominos",
+            "papa johns","shake shack","five guys","texas roadhouse","applebees","chilis",
+            "nandos","the noodle","just eat","deliveroo"
         ),
         ExpenseCategory.GROCERY to listOf(
             "lulu","carrefour","safari","al meera","monoprix","spinneys","waitrose",
-            "family food","geant","hypermarket","supermarket","grocery","fresh","spar","grand mart",
-            "al khor","megamart","al noor"
+            "family food","geant","hypermarket","supermarket","grocery","spar","grand mart",
+            "al khor","megamart","al noor","fresh mart","organic","co-op"
         ),
         ExpenseCategory.TRANSPORT to listOf(
-            "uber","careem","taxi","metro","mowasalat","bus","karwa",
+            "uber","careem","karwa","taxi","metro","mowasalat","bus",
             "parking","salik","toll","lyft","bolt","indrive","limousine"
         ),
         ExpenseCategory.FUEL to listOf(
@@ -83,22 +83,22 @@ object SmsParser {
             "amazon","noon","namshi","ounass","zara","h&m","ikea",
             "centrepoint","max fashion","splash","landmark","ace hardware",
             "home centre","pottery barn","virgin megastore","plug","istore",
-            "apple store","samsung","lulu electronics","sharafdg","sharaf dg"
+            "apple store","samsung","sharaf dg","lulu electronics"
         ),
         ExpenseCategory.BILLS to listOf(
             "ooredoo","vodafone qatar","kahramaa","electricity","water",
-            "utility","internet","broadband","telecom","stc",
-            "du ","etisalat","phone bill","mobile bill","postpaid","recharge"
+            "utility","internet","broadband","telecom","stc","du ","etisalat",
+            "phone bill","mobile bill","postpaid","recharge"
         ),
         ExpenseCategory.SUBSCRIPTION to listOf(
             "netflix","spotify","apple","google play","microsoft","adobe","aws",
-            "shahid","osn","beinsport","bein sport","disney","hotstar","amazon prime",
-            "youtube premium","icloud","dropbox","linkedin","zoom","slack"
+            "shahid","osn","bein sport","disney","hotstar","amazon prime",
+            "youtube premium","icloud","dropbox","linkedin","zoom","slack","chatgpt"
         ),
         ExpenseCategory.HEALTH to listOf(
             "hospital","clinic","pharmacy","medical","doctor","dental",
             "hamad","aster","american hospital","sidra","qmc","al ahli",
-            "medicine","optician","lab","diagnostic","health","wellness"
+            "medicine","optician","lab","diagnostic","wellness"
         ),
         ExpenseCategory.ENTERTAINMENT to listOf(
             "cinema","movie","vox","reel","muvi","bowling","escape room",
@@ -107,19 +107,34 @@ object SmsParser {
         ),
         ExpenseCategory.EDUCATION to listOf(
             "school","university","tuition","course","education","training",
-            "books","stationery","qatar university","cmu","nu-q","hec",
+            "books","stationery","qatar university","cmu","nu-q",
             "british council","ielts","udemy","coursera"
         ),
         ExpenseCategory.TRAVEL to listOf(
             "qatar airways","airline","flight","airport","hotel","booking",
             "airbnb","holiday","travel","resort","marriott","hilton",
-            "hyatt","rotana","intercontinental","expedia","agoda","makemytrip"
+            "hyatt","rotana","intercontinental","expedia","agoda"
         ),
         ExpenseCategory.SALARY to listOf("salary","payroll","wage","income","monthly pay"),
         ExpenseCategory.TRANSFER to listOf("transfer","neft","imps","rtgs","sent to","wire")
     )
 
     fun getCategoryKeywords(cat: ExpenseCategory): List<String> = CATEGORY_KEYWORDS[cat] ?: emptyList()
+
+    // MERCHANT-FIRST: check merchant name against keywords first, then full SMS
+    fun categorize(merchant: String, sms: String = ""): ExpenseCategory {
+        val merchantLower = merchant.lowercase()
+        // Phase 1: merchant name only (most reliable)
+        for ((cat, kws) in CATEGORY_KEYWORDS) {
+            if (kws.any { merchantLower.contains(it) }) return cat
+        }
+        // Phase 2: full SMS context (fallback only)
+        val smsLower = sms.lowercase()
+        for ((cat, kws) in CATEGORY_KEYWORDS) {
+            if (kws.any { smsLower.contains(it) }) return cat
+        }
+        return ExpenseCategory.OTHER
+    }
 
     fun isDebitTransaction(sms: String, config: ParserConfig = ParserConfig()): Boolean {
         val lower = sms.lowercase()
@@ -139,8 +154,7 @@ object SmsParser {
     }
 
     fun parse(
-        sms: String,
-        sender: String = "",
+        sms: String, sender: String = "",
         receivedAt: LocalDateTime = LocalDateTime.now(),
         config: ParserConfig = ParserConfig()
     ): ParsedTransaction? {
@@ -150,11 +164,10 @@ object SmsParser {
         val merchant = extractMerchant(sms).ifBlank { sender.ifBlank { "Unknown" } }
         val balance  = extractBalance(sms)
         val lower    = sms.lowercase()
-        val isRefund = REFUND_WORDS.any { lower.contains(it) }
+        val isRefund   = REFUND_WORDS.any { lower.contains(it) }
         val isTransfer = TRANSFER_WORDS.any { lower.contains(it) }
-        val category = categorize(merchant, sms)
+        val category   = categorize(merchant, sms)     // merchant-first
         val confidence = computeConfidence(sms, merchant, category)
-
         return ParsedTransaction(
             amount = amount, merchant = merchant, balance = balance,
             category = category, dateTime = receivedAt, rawSms = sms,
@@ -163,20 +176,12 @@ object SmsParser {
         )
     }
 
-    fun categorize(merchant: String, sms: String = ""): ExpenseCategory {
-        val combined = (merchant + " " + sms).lowercase()
-        for ((cat, kws) in CATEGORY_KEYWORDS) {
-            if (kws.any { combined.contains(it) }) return cat
-        }
-        return ExpenseCategory.OTHER
-    }
-
     private fun computeConfidence(sms: String, merchant: String, category: ExpenseCategory): Float {
-        var score = 0.5f
-        val lower = sms.lowercase()
+        var score = 0.4f
         if (amountPatterns("QAR").first().containsMatchIn(sms)) score += 0.2f
-        if (merchant != "Unknown" && merchant.length > 3) score += 0.15f
-        if (CATEGORY_KEYWORDS[category]?.any { lower.contains(it) } == true) score += 0.15f
+        if (merchant.length > 3 && merchant != "Unknown") score += 0.2f
+        val merchantLower = merchant.lowercase()
+        if (CATEGORY_KEYWORDS[category]?.any { merchantLower.contains(it) } == true) score += 0.2f
         return score.coerceIn(0f, 1f)
     }
 

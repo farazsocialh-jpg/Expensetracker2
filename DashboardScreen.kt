@@ -4,8 +4,6 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,11 +20,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.expensetracker.domain.model.*
-import com.expensetracker.presentation.ui.theme.CategoryColors
 import java.time.format.DateTimeFormatter
-import kotlin.math.min
 
-// ─── Shared currency formatter ────────────────────────────────────────────────
 fun formatAmount(amount: Double, currency: String = "QAR"): String =
     "$currency ${"%,.2f".format(amount)}"
 
@@ -37,156 +32,124 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    val stats = state.stats
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(bottom = 100.dp),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
+        contentPadding = PaddingValues(bottom = 100.dp)
     ) {
-        // Hero card
         item {
-            HeroSpendCard(
-                monthly = stats?.monthlyTotal ?: 0.0,
-                daily = stats?.dailyTotal ?: 0.0,
-                weekly = stats?.weeklyTotal ?: 0.0,
-                projected = stats?.projectedMonthly ?: 0.0,
-                dailyAvg = stats?.dailyAverage ?: 0.0,
-                hideBalances = state.hideBalances,
-                isLoading = state.isLoading
+            HeroCard(
+                monthly  = state.stats.monthlyTotal,
+                daily    = state.stats.dailyTotal,
+                weekly   = state.stats.weeklyTotal,
+                projected = state.stats.projectedMonthly,
+                dailyAvg  = state.stats.dailyAverage,
+                currency = state.currency,
+                hide     = state.hideBalances,
+                loading  = state.isLoading
             )
         }
 
-        // Alerts
-        if ((stats?.alerts?.size ?: 0) > 0) {
-            item { AlertsSection(alerts = stats!!.alerts) }
+        if (state.stats.alerts.isNotEmpty()) {
+            item { AlertsRow(state.stats.alerts) }
         }
 
-        // Donut chart
-        if ((stats?.categorySummaries?.size ?: 0) > 0) {
+        if (state.stats.categorySummaries.isNotEmpty()) {
             item {
-                SpendingDonutChart(
-                    summaries = stats!!.categorySummaries,
-                    total = stats.monthlyTotal,
-                    hideBalances = state.hideBalances,
-                    onSeeAll = onNavigateToBudget
+                DonutSection(
+                    summaries = state.stats.categorySummaries,
+                    total     = state.stats.monthlyTotal,
+                    currency  = state.currency,
+                    hide      = state.hideBalances,
+                    onBudgets = onNavigateToBudget
                 )
             }
         }
 
-        // Top merchants
-        if ((stats?.topMerchants?.size ?: 0) > 0) {
-            item { TopMerchantsSection(merchants = stats!!.topMerchants, hideBalances = state.hideBalances) }
-        }
-
-        // Recent transactions
         item {
             RecentSection(
                 transactions = state.recentTransactions,
-                hideBalances = state.hideBalances,
-                onSeeAll = onNavigateToTransactions
+                currency     = state.currency,
+                hide         = state.hideBalances,
+                onSeeAll     = onNavigateToTransactions
             )
-        }
-
-        if (state.isLoading) {
-            item {
-                Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                }
-            }
         }
     }
 }
 
 @Composable
-fun HeroSpendCard(
+fun HeroCard(
     monthly: Double, daily: Double, weekly: Double,
     projected: Double, dailyAvg: Double,
-    hideBalances: Boolean, isLoading: Boolean
+    currency: String, hide: Boolean, loading: Boolean
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
-                        MaterialTheme.colorScheme.background
-                    )
-                )
-            )
+        Modifier.fillMaxWidth()
+            .background(Brush.verticalGradient(listOf(
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                MaterialTheme.colorScheme.background
+            )))
             .padding(20.dp)
     ) {
         Column {
-            Text("This Month",
-                style = MaterialTheme.typography.labelLarge,
+            Text("This Month", style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(4.dp))
-            if (isLoading) {
-                Box(Modifier.height(48.dp).width(200.dp)
-                    .clip(RoundedCornerShape(8.dp))
+            if (loading) {
+                Box(Modifier.height(48.dp).width(180.dp).clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant))
             } else {
                 Text(
-                    if (hideBalances) "••••••" else formatAmount(monthly),
+                    if (hide) "••••••" else formatAmount(monthly, currency),
                     style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
+                    fontWeight = FontWeight.Bold
                 )
             }
-            if (projected > 0 && !hideBalances) {
-                Text("Projected: ${formatAmount(projected)}",
+            if (!hide && projected > 0) {
+                Text("Projected: ${formatAmount(projected, currency)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Spacer(Modifier.height(20.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                MiniStatCard("Today",    if (hideBalances) "••••" else formatAmount(daily),   Modifier.weight(1f))
-                MiniStatCard("This Week",if (hideBalances) "••••" else formatAmount(weekly),  Modifier.weight(1f))
-                MiniStatCard("Daily Avg",if (hideBalances) "••••" else formatAmount(dailyAvg),Modifier.weight(1f))
+            Spacer(Modifier.height(16.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MiniCard("Today",     if (hide) "••••" else formatAmount(daily, currency),    Modifier.weight(1f))
+                MiniCard("This Week", if (hide) "••••" else formatAmount(weekly, currency),   Modifier.weight(1f))
+                MiniCard("Daily Avg", if (hide) "••••" else formatAmount(dailyAvg, currency), Modifier.weight(1f))
             }
         }
     }
 }
 
 @Composable
-fun MiniStatCard(label: String, value: String, modifier: Modifier = Modifier) {
-    Card(modifier = modifier, shape = RoundedCornerShape(14.dp),
+fun MiniCard(label: String, value: String, modifier: Modifier) {
+    Card(modifier, shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
         Column(Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(label, style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(2.dp))
-            Text(value, style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary,
+            Text(value, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
 
 @Composable
-fun AlertsSection(alerts: List<SpendingAlert>) {
+fun AlertsRow(alerts: List<SpendingAlert>) {
     Column(Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
         alerts.take(3).forEach { alert ->
             val color = when (alert.type) {
                 AlertType.BUDGET_EXCEEDED -> MaterialTheme.colorScheme.error
                 AlertType.BUDGET_WARNING  -> Color(0xFFFF9800)
-                else -> MaterialTheme.colorScheme.primary
+                else                      -> MaterialTheme.colorScheme.primary
             }
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                shape = RoundedCornerShape(10.dp),
-                colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.12f))
-            ) {
+            Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), shape = RoundedCornerShape(10.dp),
+                colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.12f))) {
                 Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        if (alert.type == AlertType.BUDGET_EXCEEDED) Icons.Default.Warning else Icons.Default.Info,
-                        null, tint = color, modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(10.dp))
+                    Icon(if (alert.type == AlertType.BUDGET_EXCEEDED) Icons.Default.Warning else Icons.Default.Info,
+                        null, tint = color, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text(alert.message, style = MaterialTheme.typography.bodySmall, color = color)
                 }
             }
@@ -195,48 +158,35 @@ fun AlertsSection(alerts: List<SpendingAlert>) {
 }
 
 @Composable
-fun SpendingDonutChart(
-    summaries: List<CategorySummary>,
-    total: Double,
-    hideBalances: Boolean,
-    onSeeAll: () -> Unit
+fun DonutSection(
+    summaries: List<CategorySummary>, total: Double,
+    currency: String, hide: Boolean, onBudgets: () -> Unit
 ) {
     val anim = remember { Animatable(0f) }
-    LaunchedEffect(summaries) {
-        anim.snapTo(0f)
-        anim.animateTo(1f, tween(900, easing = EaseOutCubic))
-    }
+    LaunchedEffect(summaries) { anim.snapTo(0f); anim.animateTo(1f, tween(900, easing = EaseOutCubic)) }
 
     Card(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
         Column(Modifier.padding(20.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
-                Text("Spending Breakdown", style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold)
-                TextButton(onClick = onSeeAll) { Text("Budgets") }
+                Text("Spending Breakdown", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                TextButton(onClick = onBudgets) { Text("Budgets") }
             }
             Spacer(Modifier.height(16.dp))
-            Row(verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                // Donut
-                DonutChart(summaries, total, anim.value, hideBalances, 150.dp)
-                // Legend
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                DonutChart(summaries, total, anim.value, currency, hide, 140.dp)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     summaries.take(6).forEach { s ->
                         val color = Color(s.category.color)
-                        Row(verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Box(Modifier.size(8.dp).clip(CircleShape).background(color))
                             Text(s.category.displayName, style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.weight(1f), maxLines = 1)
-                            if (!hideBalances) {
-                                Text(formatAmount(s.totalAmount), style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold)
-                            }
+                            if (!hide) Text(formatAmount(s.totalAmount, currency),
+                                style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -247,33 +197,24 @@ fun SpendingDonutChart(
 
 @Composable
 fun DonutChart(
-    summaries: List<CategorySummary>,
-    total: Double,
-    animProgress: Float,
-    hideBalances: Boolean,
-    size: Dp
+    summaries: List<CategorySummary>, total: Double,
+    animProgress: Float, currency: String, hide: Boolean, size: Dp
 ) {
-    val sweeps = if (total > 0)
-        summaries.map { ((it.totalAmount / total) * 360f * animProgress).toFloat() }
-    else summaries.map { 0f }
-
+    val sweeps = if (total > 0) summaries.map { ((it.totalAmount / total) * 360f * animProgress).toFloat() }
+                 else summaries.map { 0f }
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {
         androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
-            var startAngle = -90f
+            var start = -90f
             sweeps.forEachIndexed { i, sweep ->
-                drawArc(
-                    color = Color(summaries[i].category.color),
-                    startAngle = startAngle,
-                    sweepAngle = (sweep - 2f).coerceAtLeast(0f),
-                    useCenter = false,
-                    style = Stroke(width = 30f, cap = StrokeCap.Round)
-                )
-                startAngle += sweep
+                drawArc(Color(summaries[i].category.color), start,
+                    (sweep - 2f).coerceAtLeast(0f), false,
+                    style = Stroke(28f, cap = StrokeCap.Round))
+                start += sweep
             }
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(if (hideBalances) "••••" else formatAmount(total * animProgress),
-                style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Text(if (hide) "••••" else formatAmount(total * animProgress),
+                style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
             Text("total", style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -281,54 +222,29 @@ fun DonutChart(
 }
 
 @Composable
-fun TopMerchantsSection(merchants: List<MerchantSummary>, hideBalances: Boolean) {
-    Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
-        Text("Top Merchants", style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(10.dp))
-        merchants.forEach { m ->
-            val color = Color(m.category.color)
-            Row(Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(36.dp).clip(CircleShape).background(color.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center) {
-                    Text(m.category.emoji, fontSize = 16.sp)
-                }
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(m.name, style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium, maxLines = 1)
-                    Text("${m.count} transactions", style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                if (!hideBalances) {
-                    Text(formatAmount(m.totalAmount), style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold, color = color)
-                }
-            }
-        }
-    }
-}
-
-@Composable
 fun RecentSection(
-    transactions: List<Transaction>,
-    hideBalances: Boolean,
-    onSeeAll: () -> Unit
+    transactions: List<Transaction>, currency: String,
+    hide: Boolean, onSeeAll: () -> Unit
 ) {
     Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically) {
-            Text("Recent Transactions", style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold)
+            Text("Recent", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             TextButton(onClick = onSeeAll) { Text("See All") }
         }
         if (transactions.isEmpty()) {
-            EmptyState("📭", "No transactions yet", "SMS auto-import is active")
+            Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("📭", fontSize = 40.sp)
+                Spacer(Modifier.height(8.dp))
+                Text("No transactions yet", style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("SMS auto-import is active", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         } else {
             transactions.forEach { t ->
-                TransactionRow(t, hideBalances)
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                TransactionRow(t, currency, hide)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
             }
         }
     }
@@ -336,82 +252,43 @@ fun RecentSection(
 
 @Composable
 fun TransactionRow(
-    transaction: Transaction,
-    hideBalances: Boolean,
-    onEdit: (() -> Unit)? = null,
-    onDelete: (() -> Unit)? = null,
+    t: Transaction, currency: String = "QAR", hide: Boolean = false,
     onClick: (() -> Unit)? = null
 ) {
-    val color = Color(transaction.category.color)
+    val color = Color(t.category.color)
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)
+        Modifier.fillMaxWidth().padding(vertical = 10.dp)
             .let { if (onClick != null) it.clickable { onClick() } else it },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(Modifier.size(42.dp).clip(CircleShape).background(color.copy(alpha = 0.15f)),
+        Box(Modifier.size(40.dp).clip(CircleShape).background(color.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center) {
-            Text(transaction.category.emoji, fontSize = 18.sp)
+            Text(t.category.emoji, fontSize = 18.sp)
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(transaction.merchant, style = MaterialTheme.typography.bodyMedium,
+            Text(t.merchant, style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(transaction.category.displayName, style = MaterialTheme.typography.labelSmall,
+                Text(t.category.displayName, style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("•", style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(transaction.dateTime.format(DateTimeFormatter.ofPattern("MMM d, h:mm a")),
+                Text(t.dateTime.format(DateTimeFormatter.ofPattern("MMM d, h:mm a")),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (transaction.accountLast4.isNotBlank()) {
-                    Text("• ••••${transaction.accountLast4}", style = MaterialTheme.typography.labelSmall,
+                if (t.accountLast4.isNotBlank()) {
+                    Text("• ••••${t.accountLast4}", style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text(
-                if (hideBalances) "••••"
-                else "-${formatAmount(transaction.amount)}",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.error
-            )
-            if (transaction.isRecurring) {
-                Text("recurring", style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary)
-            }
-        }
-        if (onEdit != null || onDelete != null) {
-            Spacer(Modifier.width(4.dp))
-            Column {
-                onEdit?.let {
-                    IconButton(onClick = it, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp))
-                    }
-                }
-                onDelete?.let {
-                    IconButton(onClick = it, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Delete, null, modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.error)
-                    }
-                }
-            }
+            Text(if (hide) "••••" else "-${formatAmount(t.amount, currency)}",
+                style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.error)
+            if (t.isRecurring) Text("recurring", style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary)
         }
     }
 }
-
-@Composable
-fun EmptyState(emoji: String, title: String, subtitle: String) {
-    Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(emoji, fontSize = 48.sp)
-            Spacer(Modifier.height(8.dp))
-            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-

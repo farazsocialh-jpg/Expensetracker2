@@ -3,6 +3,7 @@ package com.expensetracker.presentation.transactions
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.expensetracker.data.db.normalizeMerchant
 import com.expensetracker.data.repository.SettingsRepository
 import com.expensetracker.data.repository.TransactionRepository
 import com.expensetracker.domain.model.*
@@ -38,10 +39,11 @@ data class TransactionUiState(
     val editingTransaction: Transaction? = null,
     val detailTransaction: Transaction? = null,
     val showCustomDatePicker: Boolean = false,
-    val monthStartDay: Int = 1,
     val pendingRecategorize: Pair<Transaction, ExpenseCategory>? = null,
     val snackbarMessage: String? = null,
-    val hideBalances: Boolean = false
+    val hideBalances: Boolean = false,
+    val currency: String = "QAR",
+    val monthStartDay: Int = 1
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -57,49 +59,44 @@ class TransactionViewModel @Inject constructor(
 
     init {
         settingsRepo.settings.onEach { s ->
-            _state.update { it.copy(monthStartDay = s.monthStartDay, hideBalances = s.hideBalances) }
+            _state.update { it.copy(hideBalances = s.hideBalances, currency = s.currencySymbol, monthStartDay = s.monthStartDay) }
         }.launchIn(viewModelScope)
 
-        _filter.flatMapLatest { f ->
-            val msd = _state.value.monthStartDay
-            val (start, end) = resolveDates(f, msd)
-            when {
-                f.searchQuery.isNotBlank() -> repo.search(f.searchQuery)
-                f.showRecurringOnly        -> repo.getRecurring()
-                f.cardNumber != null       -> repo.getByCard(f.cardNumber)
-                f.category != null && start != null && end != null ->
-                    repo.getByDateRange(start, end).map { it.filter { t -> t.category == f.category } }
-                f.category != null         -> repo.getByCategory(f.category)
-                start != null && end != null -> repo.getByDateRange(start, end)
-                else                       -> repo.getAll()
+        combine(_filter, settingsRepo.settings) { f, s -> f to s.monthStartDay }
+            .flatMapLatest { (f, msd) ->
+                val (start, end) = resolveDates(f, msd)
+                when {
+                    f.searchQuery.isNotBlank()  -> repo.search(f.searchQuery)
+                    f.showRecurringOnly         -> repo.getRecurring()
+                    f.cardNumber != null        -> repo.getByCard(f.cardNumber)
+                    f.category != null && start != null && end != null ->
+                        repo.getByDateRange(start, end).map { list -> list.filter { it.category == f.category } }
+                    f.category != null          -> repo.getByCategory(f.category)
+                    start != null && end != null -> repo.getByDateRange(start, end)
+                    else                        -> repo.getAll()
+                }
             }
-        }.onEach { list ->
-            _state.update { it.copy(transactions = list) }
-        }.launchIn(viewModelScope)
+            .onEach { list -> _state.update { it.copy(transactions = list) } }
+            .launchIn(viewModelScope)
 
-        repo.getDistinctCards().onEach { cards ->
-            _state.update { it.copy(availableCards = cards) }
-        }.launchIn(viewModelScope)
+        repo.getDistinctCards()
+            .onEach { cards -> _state.update { it.copy(availableCards = cards) } }
+            .launchIn(viewModelScope)
     }
 
     private fun resolveDates(f: TransactionFilter, msd: Int): Pair<LocalDateTime?, LocalDateTime?> {
-        val today = LocalDate.now()
+        val today    = LocalDate.now()
         val startDay = msd.coerceIn(1, 28)
         return when (f.datePreset) {
-            DateRangePreset.ALL       -> null to null
-            DateRangePreset.TODAY     -> today.atStartOfDay() to today.plusDays(1).atStartOfDay()
-            DateRangePreset.THIS_WEEK -> {
-                val dow = today.dayOfWeek.value
-                today.minusDays(dow.toLong() - 1).atStartOfDay() to today.plusDays(1).atStartOfDay()
-            }
+            DateRangePreset.ALL        -> null to null
+            DateRangePreset.TODAY      -> today.atStartOfDay() to today.plusDays(1).atStartOfDay()
+            DateRangePreset.THIS_WEEK  -> today.minusDays(today.dayOfWeek.value.toLong() - 1).atStartOfDay() to today.plusDays(1).atStartOfDay()
             DateRangePreset.THIS_MONTH -> {
-                val ms = if (today.dayOfMonth >= startDay) today.withDayOfMonth(startDay)
-                         else today.minusMonths(1).withDayOfMonth(startDay)
+                val ms = if (today.dayOfMonth >= startDay) today.withDayOfMonth(startDay) else today.minusMonths(1).withDayOfMonth(startDay)
                 ms.atStartOfDay() to today.plusDays(1).atStartOfDay()
             }
             DateRangePreset.LAST_MONTH -> {
-                val thisMs = if (today.dayOfMonth >= startDay) today.withDayOfMonth(startDay)
-                             else today.minusMonths(1).withDayOfMonth(startDay)
+                val thisMs = if (today.dayOfMonth >= startDay) today.withDayOfMonth(startDay) else today.minusMonths(1).withDayOfMonth(startDay)
                 thisMs.minusMonths(1).atStartOfDay() to thisMs.atStartOfDay()
             }
             DateRangePreset.CUSTOM -> f.startDate to f.endDate
@@ -123,21 +120,21 @@ class TransactionViewModel @Inject constructor(
 
     fun dismissCustomDatePicker() = _state.update { it.copy(showCustomDatePicker = false) }
 
-    // Selection
     fun toggleSelectionMode() = _state.update { it.copy(isSelectionMode = !it.isSelectionMode, selectedIds = emptySet()) }
     fun toggleSelect(id: Long) = _state.update { s ->
         val ids = if (id in s.selectedIds) s.selectedIds - id else s.selectedIds + id
         s.copy(selectedIds = ids)
     }
-    fun selectAll()     = _state.update { it.copy(selectedIds = it.transactions.map { t -> t.id }.toSet()) }
+    fun selectAll()      = _state.update { it.copy(selectedIds = it.transactions.map { t -> t.id }.toSet()) }
     fun clearSelection() = _state.update { it.copy(selectedIds = emptySet(), isSelectionMode = false) }
 
-    // Dialogs
-    fun showAddDialog()            = _state.update { it.copy(showAddDialog = true, editingTransaction = null) }
+    fun showAddDialog()                = _state.update { it.copy(showAddDialog = true, editingTransaction = null) }
     fun showEditDialog(t: Transaction) = _state.update { it.copy(showAddDialog = true, editingTransaction = t) }
-    fun showDetail(t: Transaction) = _state.update { it.copy(detailTransaction = t) }
-    fun hideDetail()               = _state.update { it.copy(detailTransaction = null) }
-    fun hideDialog()               = _state.update { it.copy(showAddDialog = false, editingTransaction = null) }
+    fun showDetail(t: Transaction)     = _state.update { it.copy(detailTransaction = t) }
+    fun hideDetail()                   = _state.update { it.copy(detailTransaction = null) }
+    fun hideDialog()                   = _state.update { it.copy(showAddDialog = false, editingTransaction = null) }
+    fun clearSnackbar()                = _state.update { it.copy(snackbarMessage = null) }
+    fun dismissRecategorize()          = _state.update { it.copy(pendingRecategorize = null) }
 
     fun saveTransaction(t: Transaction) {
         viewModelScope.launch {
@@ -162,58 +159,32 @@ class TransactionViewModel @Inject constructor(
         }
     }
 
-    /** Show recategorize dialog with rule options */
-    fun requestRecategorize(transaction: Transaction, newCategory: ExpenseCategory) {
-        _state.update { it.copy(pendingRecategorize = transaction to newCategory) }
-    }
+    fun requestRecategorize(t: Transaction, cat: ExpenseCategory) =
+        _state.update { it.copy(pendingRecategorize = t to cat) }
 
-    fun dismissRecategorize() = _state.update { it.copy(pendingRecategorize = null) }
-
-    /** Apply recategorization: once / this merchant only / all + future rule */
-    fun applyRecategorize(transaction: Transaction, newCategory: ExpenseCategory, scope: RecategorizeScope) {
+    fun applyRecategorize(t: Transaction, newCat: ExpenseCategory, scope: RecategorizeScope) {
         viewModelScope.launch {
             when (scope) {
-                RecategorizeScope.ONCE -> {
-                    repo.update(transaction.copy(category = newCategory, userEdited = true))
-                }
+                RecategorizeScope.ONCE -> repo.update(t.copy(category = newCat, userEdited = true))
                 RecategorizeScope.ALL_SIMILAR -> {
-                    repo.applyMerchantRule(
-                        merchantNormalized = transaction.normalizedMerchant,
-                        category = newCategory,
-                        displayName = transaction.merchant,
-                        applyToPast = true
-                    )
-                    _state.update { it.copy(snackbarMessage = "Updated all ${transaction.merchant} transactions") }
+                    repo.applyMerchantRule(normalizeMerchant(t.merchant), t.merchant, newCat, applyToPast = true)
+                    _state.update { it.copy(snackbarMessage = "Updated all ${t.merchant} transactions") }
                 }
                 RecategorizeScope.FUTURE_ONLY -> {
-                    repo.applyMerchantRule(
-                        merchantNormalized = transaction.normalizedMerchant,
-                        category = newCategory,
-                        displayName = transaction.merchant,
-                        applyToPast = false
-                    )
-                    repo.update(transaction.copy(category = newCategory, userEdited = true))
-                    _state.update { it.copy(snackbarMessage = "Rule saved for ${transaction.merchant}") }
+                    repo.applyMerchantRule(normalizeMerchant(t.merchant), t.merchant, newCat, applyToPast = false)
+                    repo.update(t.copy(category = newCat, userEdited = true))
+                    _state.update { it.copy(snackbarMessage = "Rule saved for ${t.merchant}") }
                 }
             }
-            // Update detail view
-            _state.update { it.copy(detailTransaction = transaction.copy(category = newCategory), pendingRecategorize = null) }
+            _state.update { it.copy(detailTransaction = t.copy(category = newCat), pendingRecategorize = null) }
         }
-    }
-
-    fun clearSnackbar() = _state.update { it.copy(snackbarMessage = null) }
-
-    fun setAccountLabel(card: String, label: String) {
-        viewModelScope.launch { repo.updateAccountLabel(card, label) }
     }
 
     fun exportSelected(context: Context) {
         viewModelScope.launch {
-            val all = _state.value.transactions
-            val toExport = if (_state.value.selectedIds.isEmpty()) all
-                           else all.filter { it.id in _state.value.selectedIds }
-            val file = CsvExporter.exportToFile(context, toExport)
-            CsvExporter.shareFile(context, file)
+            val list = _state.value.transactions
+            val toExport = if (_state.value.selectedIds.isEmpty()) list else list.filter { it.id in _state.value.selectedIds }
+            CsvExporter.shareFile(context, CsvExporter.exportToFile(context, toExport))
         }
     }
 
@@ -223,5 +194,3 @@ class TransactionViewModel @Inject constructor(
         return SmsParser.getCategoryKeywords(t.category).map { kw -> kw to combined.contains(kw) }
     }
 }
-
-enum class RecategorizeScope { ONCE, ALL_SIMILAR, FUTURE_ONLY }

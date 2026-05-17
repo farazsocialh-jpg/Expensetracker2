@@ -4,7 +4,7 @@ import android.Manifest
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -16,6 +16,7 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
 import com.expensetracker.data.repository.SettingsRepository
+import com.expensetracker.domain.model.AppSettings
 import com.expensetracker.presentation.SmsPermissionScreen
 import com.expensetracker.presentation.budget.BudgetScreen
 import com.expensetracker.presentation.dashboard.DashboardScreen
@@ -38,21 +39,19 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-
     @Inject lateinit var settingsRepository: SettingsRepository
 
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val settings by settingsRepository.settings.collectAsState(initial = com.expensetracker.domain.model.AppSettings())
-
+            val settings by settingsRepository.settings.collectAsState(initial = AppSettings())
             ExpenseTrackerTheme(darkTheme = settings.darkTheme, amoledTheme = settings.amoledTheme) {
-                val smsPerms = rememberMultiplePermissionsState(
+                val perms = rememberMultiplePermissionsState(
                     listOf(Manifest.permission.READ_SMS, Manifest.permission.RECEIVE_SMS)
                 )
-                if (!smsPerms.allPermissionsGranted) {
-                    SmsPermissionScreen(onGrantPermission = { smsPerms.launchMultiplePermissionRequest() })
+                if (!perms.allPermissionsGranted) {
+                    SmsPermissionScreen(onGrantPermission = { perms.launchMultiplePermissionRequest() })
                 } else {
                     MainApp()
                 }
@@ -70,18 +69,17 @@ fun MainApp() {
     Scaffold(
         bottomBar = {
             NavigationBar {
-                val entry by navController.currentBackStackEntryAsState()
-                val current = entry?.destination
+                val entry   by navController.currentBackStackEntryAsState()
+                val current  = entry?.destination
                 bottomScreens.forEach { screen ->
                     NavigationBarItem(
-                        icon = { Icon(screen.icon, screen.label) },
-                        label = { Text(screen.label) },
+                        icon     = { Icon(screen.icon, screen.label) },
+                        label    = { Text(screen.label) },
                         selected = current?.hierarchy?.any { it.route == screen.route } == true,
-                        onClick = {
+                        onClick  = {
                             navController.navigate(screen.route) {
                                 popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
+                                launchSingleTop = true; restoreState = true
                             }
                         }
                     )
@@ -89,19 +87,19 @@ fun MainApp() {
             }
         }
     ) { padding ->
-        NavHost(navController, startDestination = Screen.Dashboard.route, Modifier.padding(padding)) {
+        NavHost(navController, Screen.Dashboard.route, Modifier.padding(padding)) {
             composable(Screen.Dashboard.route) {
                 DashboardScreen(
                     onNavigateToTransactions = { navController.navigate(Screen.Transactions.route) },
-                    onNavigateToBudget = { navController.navigate(Screen.Budget.route) }
+                    onNavigateToBudget       = { navController.navigate(Screen.Budget.route) }
                 )
             }
             composable(Screen.Transactions.route) { TransactionsScreen() }
-            composable(Screen.Budget.route) { BudgetScreen() }
-            composable(Screen.Settings.route) {
+            composable(Screen.Budget.route)       { BudgetScreen() }
+            composable(Screen.Settings.route)     {
                 SettingsScreen(onNavigateToRules = { navController.navigate(Screen.Rules.route) })
             }
-            composable(Screen.Rules.route) { MerchantRulesScreen() }
+            composable(Screen.Rules.route)        { MerchantRulesScreen() }
         }
     }
 }

@@ -25,10 +25,8 @@ class SmsReceiver : BroadcastReceiver() {
             val s = settingsRepo.settings.first()
             if (!s.autoScanEnabled) return@launch
             val config = SmsParser.ParserConfig(
-                currencySymbol = s.currencySymbol,
-                trustedSenders = s.trustedSenders,
-                debitKeywords  = s.debitKeywords,
-                creditKeywords = s.creditKeywords
+                currencySymbol = s.currencySymbol, trustedSenders = s.trustedSenders,
+                debitKeywords = s.debitKeywords, creditKeywords = s.creditKeywords
             )
             messages.forEach { msg ->
                 val body   = msg.messageBody ?: return@forEach

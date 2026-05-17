@@ -12,20 +12,13 @@ import javax.inject.Inject
 data class MerchantRulesUiState(val rules: List<MerchantRule> = emptyList())
 
 @HiltViewModel
-class MerchantRulesViewModel @Inject constructor(
-    private val repo: TransactionRepository
-) : ViewModel() {
-
+class MerchantRulesViewModel @Inject constructor(private val repo: TransactionRepository) : ViewModel() {
     private val _state = MutableStateFlow(MerchantRulesUiState())
     val state: StateFlow<MerchantRulesUiState> = _state.asStateFlow()
 
     init {
-        repo.getMerchantRules()
-            .onEach { rules -> _state.update { it.copy(rules = rules) } }
-            .launchIn(viewModelScope)
+        repo.getMerchantRules().onEach { rules -> _state.update { it.copy(rules = rules) } }.launchIn(viewModelScope)
     }
 
-    fun deleteRule(rule: MerchantRule) {
-        viewModelScope.launch { repo.deleteMerchantRule(rule) }
-    }
+    fun deleteRule(rule: MerchantRule) { viewModelScope.launch { repo.deleteMerchantRule(rule) } }
 }

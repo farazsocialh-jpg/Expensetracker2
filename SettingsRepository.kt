@@ -18,54 +18,51 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class SettingsRepository @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private object Keys {
+    private object K {
         val CURRENCY        = stringPreferencesKey("currency")
-        val TRUSTED_SENDERS = stringPreferencesKey("trusted_senders")
-        val DEBIT_KEYWORDS  = stringPreferencesKey("debit_keywords")
-        val CREDIT_KEYWORDS = stringPreferencesKey("credit_keywords")
+        val SENDERS         = stringPreferencesKey("trusted_senders")
+        val DEBIT_KW        = stringPreferencesKey("debit_keywords")
+        val CREDIT_KW       = stringPreferencesKey("credit_keywords")
         val AUTO_SCAN       = booleanPreferencesKey("auto_scan")
-        val MONTH_START_DAY = intPreferencesKey("month_start_day")
+        val MONTH_START     = intPreferencesKey("month_start_day")
         val DARK_THEME      = booleanPreferencesKey("dark_theme")
-        val AMOLED_THEME    = booleanPreferencesKey("amoled_theme")
+        val AMOLED          = booleanPreferencesKey("amoled_theme")
         val HIDE_BALANCES   = booleanPreferencesKey("hide_balances")
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
-        val COUNTRY         = stringPreferencesKey("country")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
         AppSettings(
-            currencySymbol  = p[Keys.CURRENCY] ?: "QAR",
-            trustedSenders  = p[Keys.TRUSTED_SENDERS]?.split("|")?.filter { it.isNotBlank() }
-                ?: listOf("QNB","DOHA BANK","CBQ","MASRAF","HSBC","QIIB","DUKHAN","AHLIBANK","OOREDOO","VODAFONE","COMMERCIAL BANK"),
-            debitKeywords   = p[Keys.DEBIT_KEYWORDS]?.split("|")?.filter { it.isNotBlank() }
+            currencySymbol  = p[K.CURRENCY] ?: "QAR",
+            trustedSenders  = p[K.SENDERS]?.split("|")?.filter { it.isNotBlank() }
+                ?: listOf("QNB","DOHA BANK","CBQ","MASRAF","HSBC","QIIB","DUKHAN","AHLIBANK","OOREDOO","VODAFONE"),
+            debitKeywords   = p[K.DEBIT_KW]?.split("|")?.filter { it.isNotBlank() }
                 ?: listOf("debited","payment","purchase","withdrawn","charged","paid","debit"),
-            creditKeywords  = p[Keys.CREDIT_KEYWORDS]?.split("|")?.filter { it.isNotBlank() }
+            creditKeywords  = p[K.CREDIT_KW]?.split("|")?.filter { it.isNotBlank() }
                 ?: listOf("credited","received","refund","salary"),
-            autoScanEnabled = p[Keys.AUTO_SCAN] ?: true,
-            monthStartDay   = p[Keys.MONTH_START_DAY] ?: 1,
-            darkTheme       = p[Keys.DARK_THEME] ?: true,
-            amoledTheme     = p[Keys.AMOLED_THEME] ?: false,
-            hideBalances    = p[Keys.HIDE_BALANCES] ?: false,
-            onboardingDone  = p[Keys.ONBOARDING_DONE] ?: false,
-            country         = p[Keys.COUNTRY] ?: "QA"
+            autoScanEnabled = p[K.AUTO_SCAN] ?: true,
+            monthStartDay   = p[K.MONTH_START] ?: 1,
+            darkTheme       = p[K.DARK_THEME] ?: true,
+            amoledTheme     = p[K.AMOLED] ?: false,
+            hideBalances    = p[K.HIDE_BALANCES] ?: false,
+            onboardingDone  = p[K.ONBOARDING_DONE] ?: false
         )
     }
 
     suspend fun saveSettings(s: AppSettings) {
         context.dataStore.edit { p ->
-            p[Keys.CURRENCY]        = s.currencySymbol
-            p[Keys.TRUSTED_SENDERS] = s.trustedSenders.joinToString("|")
-            p[Keys.DEBIT_KEYWORDS]  = s.debitKeywords.joinToString("|")
-            p[Keys.CREDIT_KEYWORDS] = s.creditKeywords.joinToString("|")
-            p[Keys.AUTO_SCAN]       = s.autoScanEnabled
-            p[Keys.MONTH_START_DAY] = s.monthStartDay
-            p[Keys.DARK_THEME]      = s.darkTheme
-            p[Keys.AMOLED_THEME]    = s.amoledTheme
-            p[Keys.HIDE_BALANCES]   = s.hideBalances
-            p[Keys.ONBOARDING_DONE] = s.onboardingDone
-            p[Keys.COUNTRY]         = s.country
+            p[K.CURRENCY]        = s.currencySymbol
+            p[K.SENDERS]         = s.trustedSenders.joinToString("|")
+            p[K.DEBIT_KW]        = s.debitKeywords.joinToString("|")
+            p[K.CREDIT_KW]       = s.creditKeywords.joinToString("|")
+            p[K.AUTO_SCAN]       = s.autoScanEnabled
+            p[K.MONTH_START]     = s.monthStartDay
+            p[K.DARK_THEME]      = s.darkTheme
+            p[K.AMOLED]          = s.amoledTheme
+            p[K.HIDE_BALANCES]   = s.hideBalances
+            p[K.ONBOARDING_DONE] = s.onboardingDone
         }
     }
 
-    suspend fun first(): AppSettings = settings.first()
+    suspend fun getCurrent(): AppSettings = settings.first()
 }

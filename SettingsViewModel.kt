@@ -40,9 +40,7 @@ class SettingsViewModel @Inject constructor(
     val state: StateFlow<SettingsUiState> = _state.asStateFlow()
 
     init {
-        settingsRepo.settings
-            .onEach { s -> _state.update { it.copy(settings = s) } }
-            .launchIn(viewModelScope)
+        settingsRepo.settings.onEach { s -> _state.update { it.copy(settings = s) } }.launchIn(viewModelScope)
     }
 
     fun onNewSenderInput(v: String)   = _state.update { it.copy(newSenderInput = v) }
@@ -54,29 +52,25 @@ class SettingsViewModel @Inject constructor(
         save(_state.value.settings.copy(trustedSenders = _state.value.settings.trustedSenders + v))
         _state.update { it.copy(newSenderInput = "") }
     }
-    fun removeSender(s: String) = save(_state.value.settings.copy(trustedSenders = _state.value.settings.trustedSenders - s))
-
+    fun removeSender(s: String)        = save(_state.value.settings.copy(trustedSenders = _state.value.settings.trustedSenders - s))
     fun addDebitKeyword() {
         val v = _state.value.newDebitKeyword.trim().lowercase().ifBlank { return }
         save(_state.value.settings.copy(debitKeywords = _state.value.settings.debitKeywords + v))
         _state.update { it.copy(newDebitKeyword = "") }
     }
-    fun removeDebitKeyword(k: String) = save(_state.value.settings.copy(debitKeywords = _state.value.settings.debitKeywords - k))
-
+    fun removeDebitKeyword(k: String)  = save(_state.value.settings.copy(debitKeywords = _state.value.settings.debitKeywords - k))
     fun addCreditKeyword() {
         val v = _state.value.newCreditKeyword.trim().lowercase().ifBlank { return }
         save(_state.value.settings.copy(creditKeywords = _state.value.settings.creditKeywords + v))
         _state.update { it.copy(newCreditKeyword = "") }
     }
     fun removeCreditKeyword(k: String) = save(_state.value.settings.copy(creditKeywords = _state.value.settings.creditKeywords - k))
-
-    fun setCurrency(c: String)       = save(_state.value.settings.copy(currencySymbol = c.uppercase()))
-    fun toggleAutoScan(on: Boolean)  = save(_state.value.settings.copy(autoScanEnabled = on))
-    fun setMonthStartDay(d: Int)     = save(_state.value.settings.copy(monthStartDay = d.coerceIn(1, 28)))
-    fun toggleDarkTheme(on: Boolean) = save(_state.value.settings.copy(darkTheme = on))
-    fun toggleAmoled(on: Boolean)    = save(_state.value.settings.copy(amoledTheme = on))
-    fun toggleHideBalances(on: Boolean) = save(_state.value.settings.copy(hideBalances = on))
-
+    fun setCurrency(c: String)         = save(_state.value.settings.copy(currencySymbol = c.uppercase()))
+    fun toggleAutoScan(on: Boolean)    = save(_state.value.settings.copy(autoScanEnabled = on))
+    fun setMonthStartDay(d: Int)       = save(_state.value.settings.copy(monthStartDay = d.coerceIn(1, 28)))
+    fun toggleDarkTheme(on: Boolean)   = save(_state.value.settings.copy(darkTheme = on))
+    fun toggleAmoled(on: Boolean)      = save(_state.value.settings.copy(amoledTheme = on))
+    fun toggleHideBalances(on: Boolean)= save(_state.value.settings.copy(hideBalances = on))
     private fun save(s: AppSettings) { viewModelScope.launch { settingsRepo.saveSettings(s) } }
 
     fun scanInbox() {
@@ -85,12 +79,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val s = _state.value.settings
-                val config = SmsParser.ParserConfig(
-                    currencySymbol = s.currencySymbol,
-                    trustedSenders = s.trustedSenders,
-                    debitKeywords  = s.debitKeywords,
-                    creditKeywords = s.creditKeywords
-                )
+                val config = SmsParser.ParserConfig(s.currencySymbol, s.trustedSenders, s.debitKeywords, s.creditKeywords)
                 val rawList = scanner.scanInbox(s) { scanned, total ->
                     _state.update { it.copy(scanProgress = it.scanProgress.copy(scanned = scanned, total = total)) }
                 }
